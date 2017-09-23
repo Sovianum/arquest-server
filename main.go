@@ -2,50 +2,65 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
-	"fmt"
 	_ "github.com/lib/pq"
 	"os"
+	"github.com/Sovianum/acquaintanceServer/config"
 )
 
-type Configuration struct {
-	Port       int
-	DriverName string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	LogFile    string
-}
+const (
+	dbConfFile = "resources/conf/db_conf.json"
+	authConfFile = "resources/conf/auth_conf.json"
+)
 
 func main() {
-	var file, confErr = os.Open("conf.json")
-	if confErr != nil {
-		panic(confErr)
-	}
-	defer file.Close()
-	var conf = Configuration{}
+	var dbConf = getDBConf()
+	//var authConf = getAuthConf()
 
-	var parseErr = json.NewDecoder(file).Decode(&conf)
-	if parseErr != nil {
-		panic(parseErr)
-	}
-
-	var db, err = sql.Open(
-		conf.DriverName,
-		getDBStr(conf.DBUser, conf.DBPassword, conf.DBName),
+	var db, dbErr = sql.Open(
+		dbConf.DriverName,
+		dbConf.GetAuthStr(),
 	)
-	if err != nil {
-		panic(err)
+	if dbErr != nil {
+		panic(dbErr)
 	}
 	defer db.Close()
 
-	//var logFileWriter, logErr = os.Create(conf.LogFile)
+	//var r = mux.NewRouter()
+	//http.ListenAndServe(":3000", handlers.LoggingHandler(os.Stdout, r))
+
+	//var logFileWriter, logErr = os.Create(dbConf.LogFile)
 	//if logErr != nil {
 	//	panic(logErr)
 	//}
 	//defer logFileWriter.Close()
 }
 
-func getDBStr(user string, pass string, name string) string {
-	return fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", user, pass, name)
+func getAuthConf() config.AuthConfig {
+	var file, confErr = os.Open(authConfFile)
+	if confErr != nil {
+		panic(confErr)
+	}
+	defer file.Close()
+
+	var conf, err = config.ReadAuthConf(file)
+	if err != nil {
+		panic(err)
+	}
+
+	return conf
+}
+
+func getDBConf() config.DBConfig {
+	var file, confErr = os.Open(dbConfFile)
+	if confErr != nil {
+		panic(confErr)
+	}
+	defer file.Close()
+
+	var conf, err = config.ReadDBConfig(file)
+	if err != nil {
+		panic(err)
+	}
+
+	return conf
 }

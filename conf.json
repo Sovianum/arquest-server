@@ -1,7 +1,0 @@
-{
-  "Port": 8080,
-  "DriverName": "postgres",
-  "DBUser": "go_user",
-  "DBPassword": "go",
-  "DBName": "test1"
-}

@@ -1,0 +1,8 @@
+{
+  "port": 8080,
+  "driver_name": "postgres",
+  "user": "go_user",
+  "password": "go",
+  "db_name": "test1",
+  "auth_string_template": "user=%s password=%s dbname=%s sslmode=disable"
+}

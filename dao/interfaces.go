@@ -5,10 +5,13 @@ import (
 )
 
 type UserDAO interface {
-	Save(user *model.User) error
-	Get(id int) (*model.User, error)
-	GetNeighbour(id int, distance float64) ([]*model.User, error)
-	Exists(id int) (bool, error)
+	Save(user *model.User) (int, error)
+	GetUserById(id int) (*model.User, error)
+	GetUserByLogin(login string) (*model.User, error)
+	GetNeighbourUsers(id int, distance float64) ([]*model.User, error)
+	GetIdByLogin(login string) (int, error)
+	ExistsById(id int) (bool, error)
+	ExistsByLogin(login string) (bool, error)
 }
 
 type PositionDAO interface {

@@ -9,7 +9,7 @@ CREATE TYPE SEX AS ENUM ('M', 'F', '');
 
 CREATE TABLE Users (
   id       SERIAL PRIMARY KEY,
-  login    VARCHAR(50),
+  login    VARCHAR(50) UNIQUE ,
   password VARCHAR(50),
   sex      SEX NOT NULL DEFAULT '',
   age      INT,
