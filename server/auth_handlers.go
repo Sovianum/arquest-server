@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	"encoding/json"
@@ -39,7 +39,7 @@ func (env *Env) UserRegisterPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var tokenString, tokenErr = env.getTokenString(userId, user.Login)
+	var tokenString, tokenErr = env.generateTokenString(userId, user.Login)
 	if tokenErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		// TODO add info that user has been successfully saved
@@ -72,7 +72,7 @@ func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var tokenString, tokenErr = env.getTokenString(userId, user.Login)
+	var tokenString, tokenErr = env.generateTokenString(userId, user.Login)
 	if tokenErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		// TODO add info that user has been successfully saved
@@ -82,7 +82,7 @@ func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(tokenString))
 }
 
-func (env *Env) getTokenString(id int, login string) (string, error) {
+func (env *Env) generateTokenString(id int, login string) (string, error) {
 	var token = jwt.New(jwt.SigningMethodHS256)
 	var claims = token.Claims.(jwt.MapClaims)
 

@@ -31,7 +31,9 @@ func (dao *dbPositionDAO) Save(position *model.Position) error {
 func (dao *dbPositionDAO) GetUserPosition(id int) (*model.Position, error) {
 	var position = new(model.Position)
 	var posTime time.Time
-	var err = dao.db.QueryRow(getLastPosition, id).Scan(&position.Id, &position.UserId, &position.Point.X, &position.Point.Y, &posTime)
+	var err = dao.db.QueryRow(getLastPosition, id).Scan(
+		&position.Id, &position.UserId, &position.Point.X, &position.Point.Y, &posTime,
+	)
 	if err != nil {
 		return nil, err
 	}

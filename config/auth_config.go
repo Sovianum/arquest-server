@@ -18,5 +18,5 @@ type AuthConfig struct {
 }
 
 func (conf *AuthConfig) GetTokenKey() []byte {
-	return []byte(conf.TokenKey) // TODO maybe need something more secure
+	return []byte(conf.TokenKey) // TODO use secure service instead of bicycles
 }

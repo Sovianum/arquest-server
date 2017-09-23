@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	"encoding/json"
@@ -76,6 +76,24 @@ func TestEnv_UserRegisterPost_Success(t *testing.T) {
 
 	assert.Nil(t, recErr)
 	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestEnv_UserRegisterPost_ParseFail(t *testing.T) {
+
+	var env = &Env{
+		authConf: getAuthConf(),
+	}
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UserRegisterPost,
+		strings.NewReader("Invalid json"),
+		headerPair{"Content-Type", "application/json"},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
 func TestEnv_UserRegisterPost_CheckFail(t *testing.T) {
@@ -270,6 +288,60 @@ func TestEnv_UserRegisterPost_IdExtraction(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 }
 
+func TestEnv_UserRegisterPost_NoLogin(t *testing.T) {
+	var user = &model.User{
+		Password: "password",
+		About:    "about",
+		Sex:      model.MALE,
+		Age:      100,
+	}
+
+	var env = &Env{
+		authConf: getAuthConf(),
+	}
+
+	var requestMsg, jsonErr = json.Marshal(user)
+	assert.Nil(t, jsonErr)
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UserRegisterPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestEnv_UserRegisterPost_NoPassword(t *testing.T) {
+	var user = &model.User{
+		Login: "login",
+		About:    "about",
+		Sex:      model.MALE,
+		Age:      100,
+	}
+
+	var env = &Env{
+		authConf: getAuthConf(),
+	}
+
+	var requestMsg, jsonErr = json.Marshal(user)
+	assert.Nil(t, jsonErr)
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UserRegisterPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
 func TestEnv_UserSignInPost_Success(t *testing.T) {
 	var db, mock, dbErr = sqlmock.New()
 
@@ -318,6 +390,23 @@ func TestEnv_UserSignInPost_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
+func TestEnv_UserSignInPost_ParseError(t *testing.T) {
+	var env = &Env{
+		authConf: getAuthConf(),
+	}
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UserSignInPost,
+		strings.NewReader("Invalid json"),
+		headerPair{"Content-Type", "application/json"},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
 func TestEnv_UserSignInPost_CheckFail(t *testing.T) {
 	var db, mock, dbErr = sqlmock.New()
 
@@ -358,6 +447,48 @@ func TestEnv_UserSignInPost_CheckFail(t *testing.T) {
 
 	assert.Nil(t, recErr)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestEnv_UserSignInPost_NotFound(t *testing.T) {
+	var db, mock, dbErr = sqlmock.New()
+
+	if dbErr != nil {
+		t.Fatal(dbErr)
+	}
+	defer db.Close()
+
+	var user = &model.User{
+		Login:    "login",
+		Password: "password",
+		About:    "about",
+		Sex:      model.MALE,
+		Age:      100,
+	}
+
+	// mock exists
+	mock.
+	ExpectQuery("SELECT count").
+		WithArgs(user.Login).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(0))
+
+	var env = &Env{
+		userDAO:  dao.NewDBUserDAO(db),
+		authConf: getAuthConf(),
+	}
+
+	var requestMsg, jsonErr = json.Marshal(user)
+	assert.Nil(t, jsonErr)
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UserSignInPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
 }
 
 func TestEnv_UserSignInPost_IdExtractionFail(t *testing.T) {

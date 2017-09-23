@@ -26,7 +26,7 @@ func main() {
 	defer db.Close()
 
 	//var r = mux.NewRouter()
-	//http.ListenAndServe(":3000", handlers.LoggingHandler(os.Stdout, r))
+	//http.ListenAndServe(":3000", server.LoggingHandler(os.Stdout, r))
 
 	//var logFileWriter, logErr = os.Create(dbConf.LogFile)
 	//if logErr != nil {
