@@ -32,8 +32,8 @@ func (pos *Position) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	type Alias Position
-	var dest = (*Alias)(pos)
+	type positionAlias Position
+	var dest = (*positionAlias)(pos)
 
 	err = json.Unmarshal(data, dest)
 	if err != nil {

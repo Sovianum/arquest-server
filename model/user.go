@@ -9,6 +9,7 @@ import (
 const (
 	MALE   = "M"
 	FEMALE = "F"
+	UNKNOWN = ""
 
 	UserRequiredLogin      = "\"login\" field required"
 	UserRequiredPassword   = "\"password\" field required"
@@ -34,8 +35,8 @@ func (user *User) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	type Alias User
-	var dest = (*Alias)(user)
+	type userAlias User
+	var dest = (*userAlias)(user)
 
 	err = json.Unmarshal(data, dest)
 	if err != nil {
@@ -49,7 +50,7 @@ func (user *User) UnmarshalJSON(data []byte) error {
 
 func (user *User) Validate() error {
 	var msgList = make([]string, 0)
-	if user.Sex != "" && user.Sex != MALE && user.Sex != FEMALE {
+	if user.Sex != UNKNOWN && user.Sex != MALE && user.Sex != FEMALE {
 		msgList = append(msgList, RegistrationInvalidSex)
 	}
 

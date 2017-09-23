@@ -5,13 +5,13 @@ DROP TYPE IF EXISTS SEX;
 
 DROP INDEX IF EXISTS position_user_idx;
 
-CREATE TYPE SEX AS ENUM ('M', 'F');
+CREATE TYPE SEX AS ENUM ('M', 'F', '');
 
 CREATE TABLE Users (
   id       SERIAL PRIMARY KEY,
   login    VARCHAR(50),
   password VARCHAR(50),
-  sex      SEX,
+  sex      SEX NOT NULL DEFAULT '',
   age      INT,
   about    VARCHAR(1000)
 );
