@@ -8,7 +8,7 @@ type UserDAO interface {
 	Save(user *model.User) (int, error)
 	GetUserById(id int) (*model.User, error)
 	GetUserByLogin(login string) (*model.User, error)
-	GetNeighbourUsers(id int, distance float64) ([]*model.User, error)
+	GetNeighbourUsers(id int, distance float64, onlineTimeout int) ([]*model.User, error)
 	GetIdByLogin(login string) (int, error)
 	ExistsById(id int) (bool, error)
 	ExistsByLogin(login string) (bool, error)

@@ -12,6 +12,7 @@ type Env struct {
 	userDAO       dao.UserDAO
 	positionDAO   dao.PositionDAO
 	authConf      config.AuthConfig
+	logicConf     config.LogicConfig
 	hashFunc      func(password []byte) ([]byte, error)
 	hashValidator func(password []byte, hash []byte) error
 }

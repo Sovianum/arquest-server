@@ -10,12 +10,12 @@ const (
 	getUserById       = `SELECT id, login, password, age, sex, about FROM Users WHERE id = $1`
 	getUserByLogin    = `SELECT id, login, password, age, sex, about FROM Users WHERE login = $1`
 	getIdByLogin      = `SELECT id FROM Users WHERE login = $1`
-	getNeighbourUsers = `SELECT u2.id, u2.login, u2.password, u2.age, u2.sex, u2.about
+	getNeighbourUsers = `SELECT u2.id, u2.login, u2.age, u2.sex, u2.about
 						 FROM Users u1
 						 	JOIN Users u2 ON u2.id != u1.id
 						 	JOIN Position p1 ON u1.id = p1.id
 						 	JOIN Position p2 ON u2.id = p2.id
-						 WHERE u1.id = $1 AND ST_DistanceSphere(p1.geom, p2.geom) <= $2`
+						 WHERE u1.id = $1 AND ST_DistanceSphere(p1.geom, p2.geom) <= $2 AND age(current_timestamp, p2.time) < '$3 minutes'`
 	checkUserById = `SELECT count(*) cnt FROM Users u WHERE u.id = $1`
 	checkUserByLogin = `SELECT count(*) cnt FROM Users u WHERE u.login = $1`
 )
@@ -69,8 +69,8 @@ func (dao *dbUserDAO) GetUserByLogin(login string) (*model.User, error) {
 	return user, nil
 }
 
-func (dao *dbUserDAO) GetNeighbourUsers(id int, distance float64) ([]*model.User, error) {
-	var rows, err = dao.db.Query(getNeighbourUsers, id, distance)
+func (dao *dbUserDAO) GetNeighbourUsers(id int, distance float64, onlineTimeout int) ([]*model.User, error) {
+	var rows, err = dao.db.Query(getNeighbourUsers, id, distance, onlineTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (dao *dbUserDAO) GetNeighbourUsers(id int, distance float64) ([]*model.User
 	var result = make([]*model.User, 0)
 	for rows.Next() {
 		var user = new(model.User)
-		err = rows.Scan(&user.Id, &user.Login, &user.Password, &user.Age, &user.Sex, &user.About)
+		err = rows.Scan(&user.Id, &user.Login, &user.Age, &user.Sex, &user.About)
 		if err != nil {
 			return nil, err
 		}

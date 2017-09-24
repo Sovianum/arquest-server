@@ -19,7 +19,7 @@ const (
 type User struct {
 	Id       int    `json:"id"`
 	Login    string `json:"login"`
-	Password string `json:"password"`
+	Password string `json:"password,omitempty"`
 	Age      int    `json:"age"`
 	Sex      string `json:"sex"`
 	About    string `json:"about"`

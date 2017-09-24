@@ -331,22 +331,22 @@ func TestDbUserDAO_GetNeighbour_Success(t *testing.T) {
 	}
 	defer db.Close()
 
-	var rows = sqlmock.NewRows([]string{"id", "login", "password", "age", "sex", "about"}).
-		AddRow(1, "login1", "pass1", 101, model.MALE, "about1").
-		AddRow(2, "login2", "pass2", 102, model.FEMALE, "about2")
+	var rows = sqlmock.NewRows([]string{"id", "login", "age", "sex", "about"}).
+		AddRow(1, "login1", 101, model.MALE, "about1").
+		AddRow(2, "login2", 102, model.FEMALE, "about2")
 
 	mock.
 	ExpectQuery("SELECT").
-		WithArgs(0, float64(100)).
+		WithArgs(0, float64(100), 1).
 		WillReturnRows(rows)
 
 	var users = []*model.User{
-		{Id: 1, Login: "login1", Password: "pass1", Sex: model.MALE, Age: 101, About:"about1"},
-		{Id: 2, Login: "login2", Password: "pass2", Sex: model.FEMALE, Age: 102, About:"about2"},
+		{Id: 1, Login: "login1", Sex: model.MALE, Age: 101, About:"about1"},
+		{Id: 2, Login: "login2", Sex: model.FEMALE, Age: 102, About:"about2"},
 	}
 
 	var userDAO = NewDBUserDAO(db)
-	var dbUsers, userErr = userDAO.GetNeighbourUsers(0, float64(100))
+	var dbUsers, userErr = userDAO.GetNeighbourUsers(0, float64(100), 1)
 
 	assert.Nil(t, userErr)
 	assert.Equal(t, len(users), len(dbUsers))
@@ -364,15 +364,15 @@ func TestDbUserDAO_GetNeighbour_Empty(t *testing.T) {
 	}
 	defer db.Close()
 
-	var rows = sqlmock.NewRows([]string{"id", "login", "password", "age", "sex", "about"})
+	var rows = sqlmock.NewRows([]string{"id", "login","age", "sex", "about"})
 
 	mock.
 	ExpectQuery("SELECT").
-		WithArgs(0, float64(100)).
+		WithArgs(0, float64(100), 1).
 		WillReturnRows(rows)
 
 	var userDAO = NewDBUserDAO(db)
-	var dbUsers, userErr = userDAO.GetNeighbourUsers(0, float64(100))
+	var dbUsers, userErr = userDAO.GetNeighbourUsers(0, float64(100), 1)
 
 	assert.Nil(t, userErr)
 	assert.Equal(t, 0, len(dbUsers))
@@ -388,11 +388,11 @@ func TestDbUserDAO_GetNeighbour_DBError(t *testing.T) {
 
 	mock.
 	ExpectQuery("SELECT").
-		WithArgs(0, float64(100)).
+		WithArgs(0, float64(100), 1).
 		WillReturnError(errors.New("failed to get"))
 
 	var userDAO = NewDBUserDAO(db)
-	var _, userErr = userDAO.GetNeighbourUsers(0, float64(100))
+	var _, userErr = userDAO.GetNeighbourUsers(0, float64(100), 1)
 
 	assert.NotNil(t, userErr)
 	assert.Equal(t, "failed to get", userErr.Error())

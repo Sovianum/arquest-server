@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
+	"github.com/Sovianum/acquaintanceServer/common"
 )
 
 const (
@@ -20,12 +21,14 @@ func (env *Env) UserRegisterPost(w http.ResponseWriter, r *http.Request) {
 	var user, code, parseErr = parseUser(r)
 	if parseErr != nil {
 		w.WriteHeader(code)
+		w.Write(common.GetErrorJson(parseErr))
 		return
 	}
 
 	var exists, existsErr = env.userDAO.ExistsByLogin(user.Login)
 	if existsErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(common.GetErrorJson(existsErr))
 		return
 	}
 	if exists {
@@ -36,6 +39,7 @@ func (env *Env) UserRegisterPost(w http.ResponseWriter, r *http.Request) {
 	var hash, err = env.hashFunc([]byte(user.Password))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(common.GetErrorJson(err))
 		return
 	}
 	user.Password = string(hash)
@@ -43,12 +47,14 @@ func (env *Env) UserRegisterPost(w http.ResponseWriter, r *http.Request) {
 	var userId, saveErr = env.userDAO.Save(user)
 	if saveErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(common.GetErrorJson(saveErr))
 		return
 	}
 
 	var tokenString, tokenErr = env.generateTokenString(userId, user.Login)
 	if tokenErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(common.GetErrorJson(tokenErr))
 		// TODO add info that user has been successfully saved
 		return
 	}
@@ -60,12 +66,14 @@ func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
 	var user, code, parseErr = parseUser(r)
 	if parseErr != nil {
 		w.WriteHeader(code)
+		w.Write(common.GetErrorJson(parseErr))
 		return
 	}
 
 	var exists, existsErr = env.userDAO.ExistsByLogin(user.Login)
 	if existsErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(common.GetErrorJson(existsErr))
 		return
 	}
 	if !exists {
@@ -76,17 +84,20 @@ func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
 	var dbUser, dbErr = env.userDAO.GetUserByLogin(user.Login)
 	if dbErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(common.GetErrorJson(dbErr))
 		return
 	}
 
 	if err := env.hashValidator([]byte(user.Password), []byte(dbUser.Password)); err != nil {
 		w.WriteHeader(http.StatusNotFound)
+		w.Write(common.GetErrorJson(err))
 		return
 	}
 
 	var tokenString, tokenErr = env.generateTokenString(dbUser.Id, dbUser.Login)
 	if tokenErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(common.GetErrorJson(tokenErr))
 		// TODO add info that user has been successfully saved
 		return
 	}

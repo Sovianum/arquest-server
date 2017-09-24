@@ -1,18 +1,132 @@
 package server
 
 import (
-	"testing"
-	"gopkg.in/DATA-DOG/go-sqlmock.v1"
-	"github.com/stretchr/testify/assert"
-	"strings"
-	"github.com/Sovianum/acquaintanceServer/model"
-	"github.com/Sovianum/acquaintanceServer/dao"
 	"encoding/json"
-	"net/http"
-	"time"
 	"fmt"
+	"github.com/Sovianum/acquaintanceServer/config"
+	"github.com/Sovianum/acquaintanceServer/dao"
+	"github.com/Sovianum/acquaintanceServer/model"
 	"github.com/go-errors/errors"
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/DATA-DOG/go-sqlmock.v1"
+	"net/http"
+	"strings"
+	"testing"
+	"time"
 )
+
+const (
+	distance      = 0.5
+	onlineTimeout = 5
+)
+
+//getNeighbourUsers = `SELECT u2.id, u2.login, u2.age, u2.sex, u2.about
+//						 FROM Users u1
+//						 	JOIN Users u2 ON u2.id != u1.id
+//						 	JOIN Position p1 ON u1.id = p1.id
+//						 	JOIN Position p2 ON u2.id = p2.id
+//						 WHERE u1.id = $1 AND ST_DistanceSphere(p1.geom, p2.geom) <= $2 AND age(current_timestamp, p2.time) < '$3 minutes'`
+
+func TestEnv_UserGetNeighboursGet_Success(t *testing.T) {
+	var db, mock, dbErr = sqlmock.New()
+
+	if dbErr != nil {
+		t.Fatal(dbErr)
+	}
+	defer db.Close()
+
+	// mock user extraction
+	mock.
+		ExpectQuery("SELECT u2").
+		WithArgs(1, distance, onlineTimeout).
+		WillReturnRows(
+			sqlmock.NewRows([]string{"id", "login", "age", "sex", "about"}).
+				AddRow(1, "login1", 100, model.MALE, "about1").
+				AddRow(2, "login2", 200, model.MALE, "about2"),
+		)
+
+	var env = getEnv(db)
+	env.logicConf = getLogicConf()
+
+	var tokenStr, _ = env.generateTokenString(1, "login")
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodGet,
+		env.UserGetNeighboursGet,
+		strings.NewReader(""),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	fmt.Println(rec.Body.String())
+}
+
+func TestEnv_UserGetNeighboursGet_BadToken(t *testing.T) {
+	var db, mock, dbErr = sqlmock.New()
+
+	if dbErr != nil {
+		t.Fatal(dbErr)
+	}
+	defer db.Close()
+
+	// mock user extraction
+	mock.
+	ExpectQuery("SELECT u2").
+		WithArgs(1, distance, onlineTimeout).
+		WillReturnRows(
+		sqlmock.NewRows([]string{"id", "login", "age", "sex", "about"}),
+	)
+
+	var env = getEnv(db)
+	env.logicConf = getLogicConf()
+
+	var tokenStr = []byte("invalid_token")
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodGet,
+		env.UserGetNeighboursGet,
+		strings.NewReader(""),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+}
+
+func TestEnv_UserGetNeighboursGet_DBErr(t *testing.T) {
+	var db, mock, dbErr = sqlmock.New()
+
+	if dbErr != nil {
+		t.Fatal(dbErr)
+	}
+	defer db.Close()
+
+	// mock user extraction
+	mock.
+	ExpectQuery("SELECT u2").
+		WithArgs(1, distance, onlineTimeout).
+		WillReturnError(errors.New("err"))
+
+
+	var env = getEnv(db)
+	env.logicConf = getLogicConf()
+
+	var tokenStr, _ = env.generateTokenString(1, "login")
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodGet,
+		env.UserGetNeighboursGet,
+		strings.NewReader(""),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code, rec.Body.String())
+}
 
 func TestEnv_UserSavePositionPost_Success(t *testing.T) {
 	var db, mock, dbErr = sqlmock.New()
@@ -24,20 +138,20 @@ func TestEnv_UserSavePositionPost_Success(t *testing.T) {
 
 	var date = time.Date(2003, 10, 17, 0, 0, 0, 0, time.UTC)
 	var pos = &model.Position{
-		UserId:1,
-		Point:model.Point{X:100, Y:200},
-		Time:model.QuotedTime(date),
+		UserId: 1,
+		Point:  model.Point{X: 100, Y: 200},
+		Time:   model.QuotedTime(date),
 	}
 
 	// mock position insertion
 	mock.
-	ExpectExec("INSERT INTO Position").
+		ExpectExec("INSERT INTO Position").
 		WithArgs(pos.UserId, pos.Point.X, pos.Point.Y, pos.Time.String()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	var env = &Env{
-		positionDAO:  dao.NewDBPositionDAO(db),
-		authConf: getAuthConf(),
+		positionDAO: dao.NewDBPositionDAO(db),
+		authConf:    getAuthConf(),
 	}
 
 	var requestMsg, jsonErr = json.Marshal(pos)
@@ -57,12 +171,33 @@ func TestEnv_UserSavePositionPost_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
+func TestEnv_UserSavePositionPost_BadFormat(t *testing.T) {
+	var env = &Env{
+		authConf: getAuthConf(),
+	}
+
+	var requestMsg = "invalid json"
+
+	var tokenStr, _ = env.generateTokenString(1, "login")
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UserSavePositionPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
 func TestEnv_UserSavePositionPost_Unauthorized(t *testing.T) {
 	var date = time.Date(2003, 10, 17, 0, 0, 0, 0, time.UTC)
 	var pos = &model.Position{
-		UserId:1,
-		Point:model.Point{X:100, Y:200},
-		Time:model.QuotedTime(date),
+		UserId: 1,
+		Point:  model.Point{X: 100, Y: 200},
+		Time:   model.QuotedTime(date),
 	}
 
 	var env = &Env{
@@ -87,9 +222,9 @@ func TestEnv_UserSavePositionPost_Unauthorized(t *testing.T) {
 func TestEnv_UserSavePositionPost_BadToken(t *testing.T) {
 	var date = time.Date(2003, 10, 17, 0, 0, 0, 0, time.UTC)
 	var pos = &model.Position{
-		UserId:1,
-		Point:model.Point{X:100, Y:200},
-		Time:model.QuotedTime(date),
+		UserId: 1,
+		Point:  model.Point{X: 100, Y: 200},
+		Time:   model.QuotedTime(date),
 	}
 
 	var env = &Env{
@@ -105,7 +240,7 @@ func TestEnv_UserSavePositionPost_BadToken(t *testing.T) {
 		env.UserSavePositionPost,
 		strings.NewReader(string(requestMsg)),
 		headerPair{"Content-Type", "application/json"},
-		headerPair{authorizationStr, fmt.Sprintf("Bearer some_strange_token", )},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer some_strange_token")},
 	)
 
 	assert.Nil(t, recErr)
@@ -115,9 +250,9 @@ func TestEnv_UserSavePositionPost_BadToken(t *testing.T) {
 func TestEnv_UserSavePositionPost_WrongId(t *testing.T) {
 	var date = time.Date(2003, 10, 17, 0, 0, 0, 0, time.UTC)
 	var pos = &model.Position{
-		UserId:1,
-		Point:model.Point{X:100, Y:200},
-		Time:model.QuotedTime(date),
+		UserId: 1,
+		Point:  model.Point{X: 100, Y: 200},
+		Time:   model.QuotedTime(date),
 	}
 
 	var env = &Env{
@@ -151,20 +286,20 @@ func TestEnv_UserSavePositionPost_SaveErr(t *testing.T) {
 
 	var date = time.Date(2003, 10, 17, 0, 0, 0, 0, time.UTC)
 	var pos = &model.Position{
-		UserId:1,
-		Point:model.Point{X:100, Y:200},
-		Time:model.QuotedTime(date),
+		UserId: 1,
+		Point:  model.Point{X: 100, Y: 200},
+		Time:   model.QuotedTime(date),
 	}
 
 	// mock position insertion
 	mock.
-	ExpectExec("INSERT INTO Position").
+		ExpectExec("INSERT INTO Position").
 		WithArgs(pos.UserId, pos.Point.X, pos.Point.Y, pos.Time.String()).
 		WillReturnError(errors.New("Save error"))
 
 	var env = &Env{
-		positionDAO:  dao.NewDBPositionDAO(db),
-		authConf: getAuthConf(),
+		positionDAO: dao.NewDBPositionDAO(db),
+		authConf:    getAuthConf(),
 	}
 
 	var requestMsg, jsonErr = json.Marshal(pos)
@@ -216,8 +351,8 @@ func TestEnv_parseTokenString_Fail(t *testing.T) {
 }
 
 func TestRound(t *testing.T) {
-	var testData = []struct{
-		input float64
+	var testData = []struct {
+		input    float64
 		expected int
 	}{
 		{0.999999, 1},
@@ -228,5 +363,12 @@ func TestRound(t *testing.T) {
 
 	for i, item := range testData {
 		assert.Equal(t, item.expected, round(item.input), i)
+	}
+}
+
+func getLogicConf() config.LogicConfig {
+	return config.LogicConfig{
+		OnlineTimeout: onlineTimeout,
+		Distance:      distance,
 	}
 }
