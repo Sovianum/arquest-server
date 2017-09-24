@@ -33,6 +33,13 @@ func (env *Env) UserRegisterPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var hash, err = env.hashFunc([]byte(user.Password))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	user.Password = string(hash)
+
 	var userId, saveErr = env.userDAO.Save(user)
 	if saveErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -66,13 +73,18 @@ func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var userId, idErr = env.userDAO.GetIdByLogin(user.Login)
-	if idErr != nil {
+	var dbUser, dbErr = env.userDAO.GetUserByLogin(user.Login)
+	if dbErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	var tokenString, tokenErr = env.generateTokenString(userId, user.Login)
+	if err := env.hashValidator([]byte(user.Password), []byte(dbUser.Password)); err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	var tokenString, tokenErr = env.generateTokenString(dbUser.Id, dbUser.Login)
 	if tokenErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		// TODO add info that user has been successfully saved

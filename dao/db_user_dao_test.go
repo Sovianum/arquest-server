@@ -6,6 +6,7 @@ import (
 	"testing"
 	"github.com/Sovianum/acquaintanceServer/model"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestDbUserDAO_ExistsByID_UserFound(t *testing.T) {
@@ -148,9 +149,11 @@ func TestDbUserDAO_Save_Success(t *testing.T) {
 	}
 	defer db.Close()
 
+	var pass = "password"
+	var hash, _ = bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
 	mock.
 		ExpectExec("INSERT INTO").
-		WithArgs("login", "pass", 100, model.FEMALE, "").
+		WithArgs("login", string(hash), 100, model.FEMALE, "").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	mock.
@@ -158,7 +161,7 @@ func TestDbUserDAO_Save_Success(t *testing.T) {
 		WithArgs("login").
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
-	var user = &model.User{Login: "login", Password: "pass", Sex: model.FEMALE, Age: 100}
+	var user = &model.User{Login: "login", Password: string(hash), Sex: model.FEMALE, Age: 100}
 
 	var userDAO = NewDBUserDAO(db)
 	var id, saveErr = userDAO.Save(user)
@@ -189,7 +192,7 @@ func TestDbUserDAO_Save_DuplicateLogin(t *testing.T) {
 	assert.Equal(t, "Duplicate id", saveErr.Error())
 }
 
-func TestDbUserDAO_GetById_Success(t *testing.T) {
+func TestDbUserDAO_GetUserById_Success(t *testing.T) {
 	var db, mock, err = sqlmock.New()
 
 	if err != nil {
@@ -214,7 +217,7 @@ func TestDbUserDAO_GetById_Success(t *testing.T) {
 	assert.Equal(t, user, dbUser)
 }
 
-func TestDbUserDAO_GetById_NotFound(t *testing.T) {
+func TestDbUserDAO_GetUserById_NotFound(t *testing.T) {
 	var db, mock, err = sqlmock.New()
 
 	if err != nil {
@@ -229,6 +232,51 @@ func TestDbUserDAO_GetById_NotFound(t *testing.T) {
 
 	var userDAO = NewDBUserDAO(db)
 	var _, userErr = userDAO.GetUserById(1)
+
+	assert.NotNil(t, userErr)
+	assert.Equal(t, "user not found", userErr.Error())
+}
+
+func TestDbUserDAO_GetUserByLogin_Success(t *testing.T) {
+	var db, mock, err = sqlmock.New()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var rows = sqlmock.NewRows([]string{"id", "login", "password", "age", "sex", "about"}).
+		AddRow(1, "login", "pass", 100, model.MALE, "about")
+
+	mock.
+	ExpectQuery("SELECT").
+		WithArgs("login").
+		WillReturnRows(rows)
+
+	var user = &model.User{Id: 1, Login: "login", Password: "pass", Sex: model.MALE, Age: 100, About:"about"}
+
+	var userDAO = NewDBUserDAO(db)
+	var dbUser, userErr = userDAO.GetUserByLogin(user.Login)
+
+	assert.Nil(t, userErr)
+	assert.Equal(t, user, dbUser)
+}
+
+func TestDbUserDAO_GetUserByLogin_NotFound(t *testing.T) {
+	var db, mock, err = sqlmock.New()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	mock.
+	ExpectQuery("SELECT").
+		WithArgs("login").
+		WillReturnError(errors.New("user not found"))
+
+	var userDAO = NewDBUserDAO(db)
+	var _, userErr = userDAO.GetUserByLogin("login")
 
 	assert.NotNil(t, userErr)
 	assert.Equal(t, "user not found", userErr.Error())

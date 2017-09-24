@@ -8,7 +8,7 @@ import (
 const (
 	saveUser          = `INSERT INTO Users (login, password, age, sex, about) SELECT $1, $2, $3, $4, $5`
 	getUserById       = `SELECT id, login, password, age, sex, about FROM Users WHERE id = $1`
-	getUserByLogin    = `SELECT login, password, age, sex, about FROM Users WHERE login = $1`
+	getUserByLogin    = `SELECT id, login, password, age, sex, about FROM Users WHERE login = $1`
 	getIdByLogin      = `SELECT id FROM Users WHERE login = $1`
 	getNeighbourUsers = `SELECT u2.id, u2.login, u2.password, u2.age, u2.sex, u2.about
 						 FROM Users u1
