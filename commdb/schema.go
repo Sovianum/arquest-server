@@ -1,4 +1,4 @@
-package interdb
+package commdb
 
 import (
 	"github.com/hashicorp/go-memdb"
@@ -10,6 +10,7 @@ const (
 	meetingTableName = "meeting"
 
 	idIdx = "id"
+	fromIdIdx = "toIdIdx"
 )
 
 type UserLink struct {
@@ -27,6 +28,11 @@ func GetSchema() *memdb.DBSchema {
 				Unique: true,
 				Indexer: &memdb.UintFieldIndex{Field: "Id1"},
 			},
+			fromIdIdx: {
+				Name: fromIdIdx,
+				Unique: false,
+				Indexer: &memdb.UintFieldIndex{Field: "Id2"},
+			},
 		},
 	}
 
@@ -37,6 +43,11 @@ func GetSchema() *memdb.DBSchema {
 				Name: idIdx,
 				Unique: true,
 				Indexer: &memdb.UintFieldIndex{Field: "Id1"},
+			},
+			fromIdIdx: {
+				Name: fromIdIdx,
+				Unique: false,
+				Indexer: &memdb.UintFieldIndex{Field: "Id2"},
 			},
 		},
 	}
