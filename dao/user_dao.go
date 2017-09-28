@@ -24,7 +24,7 @@ type UserDAO interface {
 	Save(user *model.User) (int, error)
 	GetUserById(id int) (*model.User, error)
 	GetUserByLogin(login string) (*model.User, error)
-	GetNeighbourUsers(id int, distance float64, onlineTimeout int) ([]*model.User, error)
+	GetNeighbourUsers(id int, distance float64, onlineTimeoutMin int) ([]*model.User, error)
 	GetIdByLogin(login string) (int, error)
 	ExistsById(id int) (bool, error)
 	ExistsByLogin(login string) (bool, error)
@@ -79,8 +79,8 @@ func (dao *dbUserDAO) GetUserByLogin(login string) (*model.User, error) {
 	return user, nil
 }
 
-func (dao *dbUserDAO) GetNeighbourUsers(id int, distance float64, onlineTimeout int) ([]*model.User, error) {
-	var rows, err = dao.db.Query(getNeighbourUsers, id, distance, onlineTimeout)
+func (dao *dbUserDAO) GetNeighbourUsers(id int, distance float64, onlineTimeoutMin int) ([]*model.User, error) {
+	var rows, err = dao.db.Query(getNeighbourUsers, id, distance, onlineTimeoutMin)
 	if err != nil {
 		return nil, err
 	}
