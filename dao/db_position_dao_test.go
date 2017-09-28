@@ -19,11 +19,10 @@ func TestDbPositionDAO_Save_Success(t *testing.T) {
 
 	mock.
 	ExpectExec("INSERT INTO Position").
-		WithArgs(100, 10., 20., "2003-10-17T00:00:00").
+		WithArgs(100, 10., 20.).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	var date = time.Date(2003, 10, 17, 0, 0, 0, 0, time.UTC)
-	var position = &model.Position{UserId: 100, Point: model.Point{X: 10., Y: 20.}, Time: model.QuotedTime(date)}
+	var position = &model.Position{UserId: 100, Point: model.Point{X: 10., Y: 20.}}
 
 	var positionDAO = NewDBPositionDAO(db)
 	var saveErr = positionDAO.Save(position)
@@ -41,11 +40,10 @@ func TestDbPositionDAO_Save_DuplicateLogin(t *testing.T) {
 
 	mock.
 	ExpectExec("INSERT INTO Position").
-		WithArgs(100, 10., 20., "2003-10-17T00:00:00").
+		WithArgs(100, 10., 20.).
 		WillReturnError(errors.New("Duplicate id"))
 
-	var date = time.Date(2003, 10, 17, 0, 0, 0, 0, time.UTC)
-	var position = &model.Position{UserId: 100, Point: model.Point{X: 10., Y: 20.}, Time: model.QuotedTime(date)}
+	var position = &model.Position{UserId: 100, Point: model.Point{X: 10., Y: 20.}}
 
 	var positionDAO = NewDBPositionDAO(db)
 	var saveErr = positionDAO.Save(position)

@@ -4,11 +4,10 @@ import (
 	"database/sql"
 	"github.com/Sovianum/acquaintanceServer/model"
 	"time"
-	"fmt"
 )
 
 const (
-	savePosition = "INSERT INTO Position (userId, point, time) SELECT $1, ST_GeomFromText('POINT($2 $3)'), $4"
+	savePosition = "INSERT INTO Position (userId, point) SELECT $1, ST_GeomFromText('POINT($2 $3)')"
 	getLastPosition = "SELECT id, userId, ST_X(p.point) x, ST_Y(p.point) y, time" +
 		              "FROM Position p WHERE p.userId = $1 ORDER BY time DESC LIMIT 1"
 )
@@ -24,7 +23,7 @@ func NewDBPositionDAO(db *sql.DB) PositionDAO {
 }
 
 func (dao *dbPositionDAO) Save(position *model.Position) error {
-	_, err := dao.db.Exec(savePosition, position.UserId, position.Point.X, position.Point.Y, fmt.Sprintf("%v", position.Time))
+	_, err := dao.db.Exec(savePosition, position.UserId, position.Point.X, position.Point.Y)
 	return err
 }
 
