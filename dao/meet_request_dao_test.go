@@ -6,7 +6,6 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
-	"net/http"
 	"strconv"
 	"testing"
 	"time"
@@ -24,7 +23,7 @@ func TestMeetRequestDAO_GetRequests_Success(t *testing.T) {
 
 	mock.
 		ExpectQuery("SELECT").
-		WithArgs(1, 1).
+		WithArgs(1).
 		WillReturnRows(
 			sqlmock.NewRows([]string{"id", "requesterId", "requestedId", "status", "time"}).
 				AddRow(1, 2, 3, model.STATUS_PENDING, date),
@@ -39,7 +38,7 @@ func TestMeetRequestDAO_GetRequests_Success(t *testing.T) {
 	}
 
 	var meetRequestDAO = NewMeetDAO(db)
-	var dbRequestRequests, dbErr = meetRequestDAO.GetRequests(1, 1)
+	var dbRequestRequests, dbErr = meetRequestDAO.GetRequests(1)
 
 	assert.Nil(t, dbErr)
 	assert.Equal(t, 1, len(dbRequestRequests))
@@ -56,13 +55,13 @@ func TestMeetRequestDAO_GetRequests_Empty(t *testing.T) {
 
 	mock.
 		ExpectQuery("SELECT").
-		WithArgs(1, 1).
+		WithArgs(1).
 		WillReturnRows(
 			sqlmock.NewRows([]string{"id", "requesterId", "requestedId", "status", "time"}),
 		)
 
 	var meetRequestDAO = NewMeetDAO(db)
-	var dbRequestRequests, dbErr = meetRequestDAO.GetRequests(1, 1)
+	var dbRequestRequests, dbErr = meetRequestDAO.GetRequests(1)
 
 	assert.Nil(t, dbErr)
 	assert.Equal(t, 0, len(dbRequestRequests))
@@ -78,11 +77,11 @@ func TestMeetRequestDAO_GetRequests_DBErr(t *testing.T) {
 
 	mock.
 		ExpectQuery("SELECT").
-		WithArgs(1, 1).
+		WithArgs(1).
 		WillReturnError(errors.New("fail"))
 
 	var meetRequestDAO = NewMeetDAO(db)
-	var _, dbErr = meetRequestDAO.GetRequests(1, 1)
+	var _, dbErr = meetRequestDAO.GetRequests(1)
 
 	assert.NotNil(t, dbErr)
 	assert.Equal(t, "fail", dbErr.Error())
@@ -106,7 +105,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 		createErrIsNil bool
 		createErrMsg   string
 
-		expectedCode int
+		expectedRowsAffected int
 	}{
 		{
 			requesterId:       1,
@@ -121,7 +120,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 
 			createErrIsNil: true,
 
-			expectedCode: http.StatusOK,
+			expectedRowsAffected: 1,
 		},
 		{
 			requesterId:       1,
@@ -136,7 +135,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 
 			createErrIsNil: true,
 
-			expectedCode: http.StatusForbidden,
+			expectedRowsAffected: 0,
 		},
 		{
 			requesterId:       1,
@@ -151,7 +150,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 
 			createErrIsNil: true,
 
-			expectedCode: http.StatusInternalServerError,
+			expectedRowsAffected: 0,
 		},
 		{
 			requesterId:       1,
@@ -166,7 +165,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 
 			createErrIsNil: true,
 
-			expectedCode: http.StatusForbidden,
+			expectedRowsAffected: 0,
 		},
 		{
 			requesterId:       1,
@@ -181,7 +180,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 
 			createErrIsNil: true,
 
-			expectedCode: http.StatusInternalServerError,
+			expectedRowsAffected: 0,
 		},
 		{
 			requesterId:       1,
@@ -197,7 +196,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 			createErrIsNil: false,
 			createErrMsg: "createErr",
 
-			expectedCode: http.StatusInternalServerError,
+			expectedRowsAffected: 0,
 		},
 	}
 
@@ -211,12 +210,12 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 		if testCase.countErrIsNil {
 			mock.
 				ExpectQuery("SELECT").
-				WithArgs(testCase.requesterId, testCase.requestedId, testCase.requestTimeOutMin).
+				WithArgs(testCase.requesterId, testCase.requestedId).
 				WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(testCase.countRes...))
 		} else {
 			mock.
 				ExpectQuery("SELECT").
-				WithArgs(testCase.requesterId, testCase.requestedId, testCase.requestTimeOutMin).
+				WithArgs(testCase.requesterId, testCase.requestedId).
 				WillReturnError(errors.New(testCase.countErrMsg))
 		}
 
@@ -248,9 +247,9 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 			}
 		}
 
-		var meetRequestDAO = &meetRequestDAO{db: db}
+		var meetRequestDAO = NewMeetDAO(db)
 
-		var resultCode, dbErr = meetRequestDAO.CreateRequest(testCase.requesterId, testCase.requestedId, testCase.requestTimeOutMin, testCase.maxDistance)
+		var rowsAffected, dbErr = meetRequestDAO.CreateRequest(testCase.requesterId, testCase.requestedId, testCase.requestTimeOutMin, testCase.maxDistance)
 
 		if testCase.countErrIsNil && testCase.accessErrIsNil && testCase.createErrIsNil {
 			assert.Nil(t, dbErr, strconv.Itoa(i))
@@ -266,7 +265,123 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 
 			assert.Equal(t, msg, dbErr.Error(), strconv.Itoa(i))
 		}
-		assert.Equal(t, testCase.expectedCode, resultCode, strconv.Itoa(i))
+		assert.Equal(t, testCase.expectedRowsAffected, rowsAffected, strconv.Itoa(i))
+
+		db.Close()
+	}
+}
+
+func TestMeetRequestDAO_AcceptRequest(t *testing.T) {
+	var cases = []struct{
+		requestId int
+		errIsNil bool
+		errMsg string
+		rowsAffected int64
+	}{
+		{
+			requestId: 1,
+			errIsNil: true,
+			rowsAffected: 1,
+		},
+		{
+			requestId: 1,
+			errIsNil: true,
+			rowsAffected: 0,
+		},
+		{
+			requestId: 1,
+			errIsNil: false,
+			errMsg: "err",
+		},
+	}
+
+	for i, testCase := range cases {
+		var db, mock, err = sqlmock.New()
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if testCase.errIsNil {
+			mock.
+			ExpectExec("UPDATE").
+				WithArgs(model.STATUS_ACCEPTED, testCase.requestId).
+				WillReturnResult(sqlmock.NewResult(1, testCase.rowsAffected))
+		} else {
+			mock.
+			ExpectExec("UPDATE").
+				WithArgs(model.STATUS_ACCEPTED, testCase.requestId).
+				WillReturnError(errors.New(testCase.errMsg))
+		}
+
+		var meetRequestDAO = NewMeetDAO(db)
+		var rowsAffected, dbErr = meetRequestDAO.AcceptRequest(testCase.requestId)
+
+		if !testCase.errIsNil {
+			assert.NotNil(t, dbErr, strconv.Itoa(i))
+			assert.Equal(t, testCase.errMsg, dbErr.Error(), strconv.Itoa(i))
+		} else {
+			assert.Nil(t, dbErr, strconv.Itoa(i))
+			assert.Equal(t, int(testCase.rowsAffected), rowsAffected, strconv.Itoa(i))
+		}
+
+		db.Close()
+	}
+}
+
+func TestMeetRequestDAO_DeclineRequest(t *testing.T) {
+	var cases = []struct{
+		requestId int
+		errIsNil bool
+		errMsg string
+		rowsAffected int64
+	}{
+		{
+			requestId: 1,
+			errIsNil: true,
+			rowsAffected: 1,
+		},
+		{
+			requestId: 1,
+			errIsNil: true,
+			rowsAffected: 0,
+		},
+		{
+			requestId: 1,
+			errIsNil: false,
+			errMsg: "err",
+		},
+	}
+
+	for i, testCase := range cases {
+		var db, mock, err = sqlmock.New()
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if testCase.errIsNil {
+			mock.
+			ExpectExec("UPDATE").
+				WithArgs(model.STATUS_DECLINED, testCase.requestId).
+				WillReturnResult(sqlmock.NewResult(1, testCase.rowsAffected))
+		} else {
+			mock.
+			ExpectExec("UPDATE").
+				WithArgs(model.STATUS_DECLINED, testCase.requestId).
+				WillReturnError(errors.New(testCase.errMsg))
+		}
+
+		var meetRequestDAO = NewMeetDAO(db)
+		var rowsAffected, dbErr = meetRequestDAO.DeclineRequest(testCase.requestId)
+
+		if !testCase.errIsNil {
+			assert.NotNil(t, dbErr, strconv.Itoa(i))
+			assert.Equal(t, testCase.errMsg, dbErr.Error(), strconv.Itoa(i))
+		} else {
+			assert.Nil(t, dbErr, strconv.Itoa(i))
+			assert.Equal(t, int(testCase.rowsAffected), rowsAffected, strconv.Itoa(i))
+		}
 
 		db.Close()
 	}

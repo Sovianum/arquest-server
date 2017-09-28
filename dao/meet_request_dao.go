@@ -3,19 +3,18 @@ package dao
 import (
 	"github.com/Sovianum/acquaintanceServer/model"
 	"database/sql"
-	"net/http"
 )
 
 const (
 	countPendingRequests = `
 		SELECT count(*) FROM MeetRequest
-		WHERE requesterId = $1 AND requestedId = $2 AND status = 'PENDING' AND age(now(), time) < '$3 minutes'
+		WHERE requesterId = $1 AND requestedId = $2 AND status = 'PENDING'
 	`
 	getPendingRequests = `
 		SELECT id, requesterId, requestedId, status, time FROM MeetRequest mr
 			JOIN Users u ON mr.requesterId = u.id
 			JOIN Position p ON p.userId = u.id
-		WHERE mr.requestedId = $1 AND age(now(), p.time) < $2 AND status = 'PENDING'
+		WHERE mr.requestedId = $1 AND status = 'PENDING'
 	`
 	checkAccessibility = `
 		SELECT ST_DistanceSphere(p1.geom, p2.geom) < $1 FROM
@@ -35,11 +34,16 @@ const (
 	createRequest = `
 		INSERT INTO MeetRequest (requesterId, requestedId) SELECT $1, $2
 	`
+	updateRequestStatus = `
+		UPDATE MeetRequest SET Status = $1 WHERE id = $2
+	`
 )
 
 type MeetRequestDAO interface {
 	CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error)
-	GetRequests(requestedId int, onlineTimeoutMin int) ([]*model.MeetRequest, error)
+	GetRequests(requestedId int) ([]*model.MeetRequest, error)
+	AcceptRequest(id int) (int, error)
+	DeclineRequest(id int) (int, error)
 }
 
 type meetRequestDAO struct {
@@ -52,35 +56,58 @@ func NewMeetDAO(db *sql.DB) MeetRequestDAO {
 	}
 }
 
-func (dao *meetRequestDAO) GetRequests(requestedId int, onlineTimeoutMin int) ([]*model.MeetRequest, error) {
-	return dao.getPendingRequests(requestedId, onlineTimeoutMin)
+func (dao *meetRequestDAO) DeclineRequest(id int) (int, error) {
+	return dao.updateRequestStatus(id, model.STATUS_DECLINED)
 }
 
-func (dao *meetRequestDAO) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error) {
-	var requestCnt, countErr = dao.countPendingRequests(requesterId, requestedId, requestTimeoutMin)
+func (dao *meetRequestDAO) AcceptRequest(id int) (int, error) {
+	return dao.updateRequestStatus(id, model.STATUS_ACCEPTED)
+}
+
+func (dao *meetRequestDAO) GetRequests(requestedId int) ([]*model.MeetRequest, error) {
+	return dao.getPendingRequests(requestedId)
+}
+
+func (dao *meetRequestDAO) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (int, error) {
+	var requestCnt, countErr = dao.countPendingRequests(requesterId, requestedId)
 	if countErr != nil {
-		return http.StatusInternalServerError, countErr
+		return 0, countErr
 	}
 
 	if requestCnt > 0 {
-		return http.StatusForbidden, nil
+		return 0, nil
 	}
 
 	var accessible, accessErr = dao.isAccessible(requesterId, requestedId, maxDistance, requestTimeoutMin)
 	if accessErr != nil {
-		return http.StatusInternalServerError, accessErr
+		return 0, accessErr
 	}
 
 	if !accessible {
-		return http.StatusForbidden, nil
+		return 0, nil
 	}
 
-	countErr = dao.createRequest(requesterId, requestedId)
-	if countErr != nil {
-		return http.StatusInternalServerError, countErr
+	var result, createErr = dao.db.Exec(createRequest, requesterId, requestedId)
+	if createErr != nil {
+		return 0, createErr
 	}
 
-	return http.StatusOK, nil
+	var rowsAffected, rowsErr = result.RowsAffected()
+	return int(rowsAffected), rowsErr
+}
+
+func (dao *meetRequestDAO) updateRequestStatus(id int, status string) (int, error) {
+	var result, err = dao.db.Exec(updateRequestStatus, status, id)
+	if err != nil {
+		return 0, err
+	}
+
+	var rowsAffected, rowsErr = result.RowsAffected()
+	if rowsErr != nil {
+		return 0, rowsErr
+	}
+
+	return int(rowsAffected), nil
 }
 
 func (dao *meetRequestDAO) isAccessible(id1 int, id2 int, maxDistance float64, timeoutMin int) (bool, error) {
@@ -109,8 +136,8 @@ func (dao *meetRequestDAO) createRequest(requesterId int, requestedId int) error
 	return err
 }
 
-func (dao *meetRequestDAO) getPendingRequests(requestedId int, onlineTimeoutMin int) ([]*model.MeetRequest, error) {
-	var rows, err = dao.db.Query(getPendingRequests, requestedId, onlineTimeoutMin)
+func (dao *meetRequestDAO) getPendingRequests(requestedId int) ([]*model.MeetRequest, error) {
+	var rows, err = dao.db.Query(getPendingRequests, requestedId)
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +160,8 @@ func (dao *meetRequestDAO) getPendingRequests(requestedId int, onlineTimeoutMin 
 	return result, nil
 }
 
-func (dao *meetRequestDAO) countPendingRequests(requesterId int, requestedId int, requestTimeoutMin int) (int, error) {
+func (dao *meetRequestDAO) countPendingRequests(requesterId int, requestedId int) (int, error) {
 	var cnt int
-	var err = dao.db.QueryRow(countPendingRequests, requesterId, requestedId, requestTimeoutMin).Scan(&cnt)
+	var err = dao.db.QueryRow(countPendingRequests, requesterId, requestedId).Scan(&cnt)
 	return cnt, err
 }
