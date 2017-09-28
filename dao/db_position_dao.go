@@ -12,6 +12,11 @@ const (
 		              "FROM Position p WHERE p.userId = $1 ORDER BY time DESC LIMIT 1"
 )
 
+type PositionDAO interface {
+	Save(position *model.Position) error
+	GetUserPosition(id int) (*model.Position, error)
+}
+
 type dbPositionDAO struct {
 	db *sql.DB
 }
