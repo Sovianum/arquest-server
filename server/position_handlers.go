@@ -24,7 +24,7 @@ func (env *Env) UserGetNeighboursGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var neighbours, nErr = env.userDAO.GetNeighbourUsers(userId, env.logicConf.Distance, env.logicConf.OnlineTimeout)
+	var neighbours, nErr = env.userDAO.GetNeighbourUsers(userId, env.conf.Logic.Distance, env.conf.Logic.OnlineTimeout)
 	if nErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(common.GetErrorJson(nErr))
@@ -61,7 +61,7 @@ func (env *Env) UserSavePositionPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var saveErr = env.positionDAO.Save(position)	// TODO use server time instead of time sent by client
+	var saveErr = env.positionDAO.Save(position)
 	if saveErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(common.GetErrorJson(saveErr))
@@ -96,7 +96,7 @@ func (env *Env) parseTokenString(tokenString string) (*jwt.Token, error) {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
 
-		return env.authConf.GetTokenKey(), nil
+		return env.conf.Auth.GetTokenKey(), nil
 	})
 }
 

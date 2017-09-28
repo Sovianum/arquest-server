@@ -111,9 +111,9 @@ func (env *Env) generateTokenString(id int, login string) (string, error) {
 
 	claims[idStr] = id
 	claims[loginStr] = login
-	claims[expStr] = time.Now().Add(time.Hour * 24 * time.Duration(env.authConf.ExpireDays)).Unix()
+	claims[expStr] = time.Now().Add(time.Hour * 24 * time.Duration(env.conf.Auth.ExpireDays)).Unix()
 
-	var tokenKey = env.authConf.GetTokenKey()
+	var tokenKey = env.conf.Auth.GetTokenKey()
 	return token.SignedString(tokenKey)
 }
 

@@ -46,7 +46,7 @@ func TestEnv_UserGetNeighboursGet_Success(t *testing.T) {
 		)
 
 	var env = getEnv(db)
-	env.logicConf = getLogicConf()
+	env.conf = getLogicConf()
 
 	var tokenStr, _ = env.generateTokenString(1, "login")
 	var rec, recErr = getRecorder(
@@ -80,7 +80,7 @@ func TestEnv_UserGetNeighboursGet_BadToken(t *testing.T) {
 	)
 
 	var env = getEnv(db)
-	env.logicConf = getLogicConf()
+	env.conf = getLogicConf()
 
 	var tokenStr = []byte("invalid_token")
 	var rec, recErr = getRecorder(
@@ -112,7 +112,7 @@ func TestEnv_UserGetNeighboursGet_DBErr(t *testing.T) {
 
 
 	var env = getEnv(db)
-	env.logicConf = getLogicConf()
+	env.conf = getLogicConf()
 
 	var tokenStr, _ = env.generateTokenString(1, "login")
 	var rec, recErr = getRecorder(
@@ -146,12 +146,12 @@ func TestEnv_UserSavePositionPost_Success(t *testing.T) {
 	// mock position insertion
 	mock.
 		ExpectExec("INSERT INTO Position").
-		WithArgs(pos.UserId, pos.Point.X, pos.Point.Y, pos.Time.String()).
+		WithArgs(pos.UserId, pos.Point.X, pos.Point.Y).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	var env = &Env{
 		positionDAO: dao.NewDBPositionDAO(db),
-		authConf:    getAuthConf(),
+		conf:    getAuthConf(),
 	}
 
 	var requestMsg, jsonErr = json.Marshal(pos)
@@ -168,12 +168,12 @@ func TestEnv_UserSavePositionPost_Success(t *testing.T) {
 	)
 
 	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
 
 func TestEnv_UserSavePositionPost_BadFormat(t *testing.T) {
 	var env = &Env{
-		authConf: getAuthConf(),
+		conf: getAuthConf(),
 	}
 
 	var requestMsg = "invalid json"
@@ -201,7 +201,7 @@ func TestEnv_UserSavePositionPost_Unauthorized(t *testing.T) {
 	}
 
 	var env = &Env{
-		authConf: getAuthConf(),
+		conf: getAuthConf(),
 	}
 
 	var requestMsg, jsonErr = json.Marshal(pos)
@@ -228,7 +228,7 @@ func TestEnv_UserSavePositionPost_BadToken(t *testing.T) {
 	}
 
 	var env = &Env{
-		authConf: getAuthConf(),
+		conf: getAuthConf(),
 	}
 
 	var requestMsg, jsonErr = json.Marshal(pos)
@@ -256,7 +256,7 @@ func TestEnv_UserSavePositionPost_WrongId(t *testing.T) {
 	}
 
 	var env = &Env{
-		authConf: getAuthConf(),
+		conf: getAuthConf(),
 	}
 
 	var requestMsg, jsonErr = json.Marshal(pos)
@@ -299,7 +299,7 @@ func TestEnv_UserSavePositionPost_SaveErr(t *testing.T) {
 
 	var env = &Env{
 		positionDAO: dao.NewDBPositionDAO(db),
-		authConf:    getAuthConf(),
+		conf:    getAuthConf(),
 	}
 
 	var requestMsg, jsonErr = json.Marshal(pos)
@@ -321,7 +321,7 @@ func TestEnv_UserSavePositionPost_SaveErr(t *testing.T) {
 
 func TestEnv_getIdFromTokenString_Success(t *testing.T) {
 	var env = &Env{
-		authConf: getAuthConf(),
+		conf: getAuthConf(),
 	}
 	var tokenStr, _ = env.generateTokenString(1, "login")
 	var token, _ = env.parseTokenString(tokenStr)
@@ -333,7 +333,7 @@ func TestEnv_getIdFromTokenString_Success(t *testing.T) {
 
 func TestEnv_parseTokenString_Success(t *testing.T) {
 	var env = &Env{
-		authConf: getAuthConf(),
+		conf: getAuthConf(),
 	}
 	var tokenStr, _ = env.generateTokenString(1, "login")
 	var _, err = env.parseTokenString(tokenStr)
@@ -343,7 +343,7 @@ func TestEnv_parseTokenString_Success(t *testing.T) {
 
 func TestEnv_parseTokenString_Fail(t *testing.T) {
 	var env = &Env{
-		authConf: getAuthConf(),
+		conf: getAuthConf(),
 	}
 	var _, err = env.parseTokenString("Some_strange_str")
 
@@ -366,9 +366,11 @@ func TestRound(t *testing.T) {
 	}
 }
 
-func getLogicConf() config.LogicConfig {
-	return config.LogicConfig{
-		OnlineTimeout: onlineTimeout,
-		Distance:      distance,
+func getLogicConf() config.Conf {
+	return config.Conf{
+		Logic: config.LogicConfig{
+			OnlineTimeout: onlineTimeout,
+			Distance:      distance,
+		},
 	}
 }

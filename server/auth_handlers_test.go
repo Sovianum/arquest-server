@@ -82,7 +82,7 @@ func TestEnv_UserRegisterPost_Success(t *testing.T) {
 func TestEnv_UserRegisterPost_ParseFail(t *testing.T) {
 
 	var env = &Env{
-		authConf: getAuthConf(),
+		conf: getAuthConf(),
 	}
 
 	var rec, recErr = getRecorder(
@@ -290,7 +290,7 @@ func TestEnv_UserRegisterPost_NoLogin(t *testing.T) {
 	}
 
 	var env = &Env{
-		authConf: getAuthConf(),
+		conf: getAuthConf(),
 	}
 
 	var requestMsg, jsonErr = json.Marshal(user)
@@ -317,7 +317,7 @@ func TestEnv_UserRegisterPost_NoPassword(t *testing.T) {
 	}
 
 	var env = &Env{
-		authConf: getAuthConf(),
+		conf: getAuthConf(),
 	}
 
 	var requestMsg, jsonErr = json.Marshal(user)
@@ -436,7 +436,7 @@ func TestEnv_UserSignInPost_WrongPassword(t *testing.T) {
 
 func TestEnv_UserSignInPost_ParseError(t *testing.T) {
 	var env = &Env{
-		authConf: getAuthConf(),
+		conf: getAuthConf(),
 	}
 
 	var rec, recErr = getRecorder(
@@ -574,10 +574,12 @@ func TestEnv_UserSignInPost_IdExtractionFail(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 }
 
-func getAuthConf() config.AuthConfig {
-	return config.AuthConfig{
-		ExpireDays: 100,
-		TokenKey:   "token90",
+func getAuthConf() config.Conf {
+	return config.Conf{
+		Auth:config.AuthConfig{
+			ExpireDays: 100,
+			TokenKey:   "token90",
+		},
 	}
 }
 
@@ -612,7 +614,7 @@ func getRecorder(
 func getEnv(db *sql.DB) *Env {
 	return &Env{
 		userDAO:  dao.NewDBUserDAO(db),
-		authConf: getAuthConf(),
+		conf: getAuthConf(),
 		hashFunc: func(password []byte) ([]byte, error) {
 			var h = sha256.New()
 			h.Write(password)
