@@ -1,9 +1,9 @@
 package config
 
 import (
-	"io"
 	"encoding/json"
 	"fmt"
+	"io"
 )
 
 func ReadConf(r io.Reader) (Conf, error) {
@@ -38,6 +38,7 @@ type LogicConfig struct {
 	OnlineTimeout     int     `json:"online_timeout"`
 	RequestExpiration int     `json:"request_expiration"`
 	CleanupInterval   int     `json:"cleanup_interval"`
+	PollSeconds       int     `json:"poll_seconds"`
 }
 
 func (conf AuthConfig) GetTokenKey() []byte {

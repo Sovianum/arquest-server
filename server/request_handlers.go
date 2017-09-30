@@ -52,6 +52,7 @@ func (env *Env) CreateRequest(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(code)
 		w.Write(common.GetErrorJson(err))
+		return
 	}
 }
 
@@ -66,12 +67,14 @@ func (env *Env) GetRequests(w http.ResponseWriter, r *http.Request) {
 	if requestsErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(common.GetErrorJson(requestsErr))
+		return
 	}
 
 	var msg, msgErr = json.Marshal(requests)
 	if msgErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(common.GetErrorJson(msgErr))
+		return
 	}
 	w.Write(msg)
 }
@@ -88,6 +91,7 @@ func (env *Env) UpdateRequest(w http.ResponseWriter, r *http.Request) {
 	if tokenErr != nil {
 		w.WriteHeader(tokenCode)
 		w.Write(common.GetErrorJson(tokenErr))
+		return
 	}
 
 	// here cache is is used before accessing database
@@ -114,57 +118,85 @@ func (env *Env) UpdateRequest(w http.ResponseWriter, r *http.Request) {
 		env.revertCache(update.Id, userId)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(common.GetErrorJson(dbErr))
+		return
 	}
 
 	if rowsAffected == 0 {
 		env.revertCache(update.Id, userId)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write(common.GetErrorJson(errors.New(requestNotFound)))
+		return
 	}
 }
 
+func (env *Env) GetNewRequests(w http.ResponseWriter, r *http.Request) {
+	var userId, tokenCode, tokenErr = env.getIdFromRequest(r)
+	if tokenErr != nil {
+		w.WriteHeader(tokenCode)
+		w.Write(common.GetErrorJson(tokenErr))
+		return
+	}
+
+	var box, boxErr = env.getMailBox(userId)
+	if boxErr != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(common.GetErrorJson(boxErr))
+		return
+	}
+
+	var newRequestData = box.GetAll(env.conf.Logic.PollSeconds)
+	var msg, jsonErr = json.Marshal(newRequestData)
+
+	if jsonErr != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(common.GetErrorJson(jsonErr))
+		return
+	}
+	w.Write(msg)
+}
+
 func (env *Env) revertCache(requestId int, userId int) {
-	var connect, found = env.meetRequestCache.Get(strconv.Itoa(userId))
+	var box, found = env.meetRequestCache.Get(strconv.Itoa(userId))
 	if !found {
 		return
 	}
 
-	connect.(MeetConnection).Remove(requestId)
+	box.(MailBox).Remove(requestId)
 }
 
 func (env *Env) handleRequestAccept(requestId int, userId int) (int, error) {
-	var connectionFunc = func(connection MeetConnection, request *model.MeetRequest) (int, error) {
-		if err := connection.AddAccept(request); err != nil {
+	var boxFunc = func(box MailBox, request *model.MeetRequest) (int, error) {
+		if err := box.AddAccept(request); err != nil {
 			return http.StatusUnavailableForLegalReasons, errors.New(alreadyAccepted)
 		}
 		return http.StatusOK, nil
 	}
 	var rightsCheckFunc = func(request *model.MeetRequest, userId int) bool {return request.RequestedId == userId}
-	return env.handleRequestUpdate(connectionFunc, rightsCheckFunc, requestId, userId)
+	return env.dispatchRequest(boxFunc, rightsCheckFunc, requestId, userId)
 }
 
 func (env *Env) handleRequestDecline(requestId int, userId int) (int, error) {
-	var connectionFunc = func(connection MeetConnection, request *model.MeetRequest) (int, error) {
-		connection.AddDecline(request)
+	var boxFunc = func(box MailBox, request *model.MeetRequest) (int, error) {
+		box.AddDecline(request)
 		return http.StatusOK, nil
 	}
 	var rightsCheckFunc = func(request *model.MeetRequest, userId int) bool {return request.RequestedId == userId}
-	return env.handleRequestUpdate(connectionFunc, rightsCheckFunc, requestId, userId)
+	return env.dispatchRequest(boxFunc, rightsCheckFunc, requestId, userId)
 }
 
 func (env *Env) handleRequestPending(requestId int, userId int) (int, error) {
-	var connectionFunc = func(connection MeetConnection, request *model.MeetRequest) (int, error) {
-		connection.AddPending(request)
+	var boxFunc = func(box MailBox, request *model.MeetRequest) (int, error) {
+		box.AddPending(request)
 		return http.StatusOK, nil
 	}
 	var rightsCheckFunc = func(request *model.MeetRequest, userId int) bool {
 		return request.RequesterId == userId
 	}
-	return env.handleRequestUpdate(connectionFunc, rightsCheckFunc, requestId, userId)
+	return env.dispatchRequest(boxFunc, rightsCheckFunc, requestId, userId)
 }
 
-func (env *Env) handleRequestUpdate(
-	connectionFunc func(MeetConnection, *model.MeetRequest) (int, error),
+func (env *Env) dispatchRequest(
+	boxFunc func(MailBox, *model.MeetRequest) (int, error),
 	rightsCheckFunc func(request *model.MeetRequest, userId int) bool,
 	requestId int,
 	userId int,
@@ -178,18 +210,26 @@ func (env *Env) handleRequestUpdate(
 		return http.StatusNotFound, errors.New(requestNotFound)
 	}
 
-	var connect, found = env.meetRequestCache.Get(strconv.Itoa(request.RequestedId))
+	var box, boxErr = env.getMailBox(userId)
+	if boxErr != nil {
+		return http.StatusInternalServerError, boxErr
+	}
+
+	return boxFunc(box, request)
+}
+
+func (env *Env) getMailBox(id int) (MailBox, error) {
+	var box, found = env.meetRequestCache.Get(strconv.Itoa(id))
 	if !found {
-		connect = NewMeetConnection()
-		env.meetRequestCache.Set(strconv.Itoa(request.RequestedId), connect, cache.DefaultExpiration)
+		box = NewMailBox()
+		env.meetRequestCache.Set(strconv.Itoa(id), box, cache.DefaultExpiration)
 	}
 
-	var casted, ok = connect.(MeetConnection)
+	var casted, ok = box.(MailBox)
 	if !ok {
-		return http.StatusInternalServerError, fmt.Errorf("failed to cast connect. Type: %T", connect)
+		return nil, fmt.Errorf("failed to cast box. Type: %T", box)
 	}
-
-	return connectionFunc(casted, request)
+	return casted, nil
 }
 
 func parseRequestUpdate(r *http.Request) (*model.MeetRequestUpdate, int, error) {

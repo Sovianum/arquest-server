@@ -451,10 +451,112 @@ func TestEnv_UpdateRequest_Error(t *testing.T) {
 	assert.Nil(t, recErr)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 
-	var conn, _ = env.meetRequestCache.Get(strconv.Itoa(mocks.RequestedId))
-	var casted = conn.(*meetConnection)
+	var box, _ = env.meetRequestCache.Get(strconv.Itoa(mocks.RequestedId))
+	var casted = box.(*mailBox)
 
 	assert.Equal(t, 0, len(casted.requestMap))
+}
+
+func TestEnv_GetNewRequests_Success(t *testing.T) {
+	var env = &Env{
+		conf:             getTotalConf(),
+		meetRequestDAO:   &mocks.MeetRequestDAOMockSuccess{},
+		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
+	}
+	var tokenStr, _ = env.generateTokenString(mocks.RequesterId, "login")
+
+	env.handleRequestPending(10, mocks.RequesterId)
+	env.handleRequestPending(20, mocks.RequesterId)
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodGet,
+		env.GetNewRequests,
+		strings.NewReader(""),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var gotRequests = make([]*model.MeetRequest, 0)
+	var jsonErr = json.Unmarshal(rec.Body.Bytes(), &gotRequests)
+
+	assert.Nil(t, jsonErr)
+	assert.Equal(t, 2, len(gotRequests))
+	for _, request := range gotRequests {
+		request.Status = model.StatusPending
+	}
+}
+
+func TestEnv_GetNewRequests_NoIdInToken(t *testing.T) {
+	var env = &Env{
+		conf:             getTotalConf(),
+		meetRequestDAO:   &mocks.MeetRequestDAOMockSuccess{},
+		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
+	}
+	var tokenStr, _ = getIncompleteToken(env)
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodGet,
+		env.GetNewRequests,
+		strings.NewReader(""),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestEnv_GetNewRequests_BadToken(t *testing.T) {
+	var env = &Env{
+		conf:             getTotalConf(),
+		meetRequestDAO:   &mocks.MeetRequestDAOMockSuccess{},
+		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
+	}
+	var tokenStr = "Bad token"
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodGet,
+		env.GetNewRequests,
+		strings.NewReader(""),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestEnv_GetNewRequests_Empty(t *testing.T) {
+	var env = &Env{
+		conf:             getTotalConf(),
+		meetRequestDAO:   &mocks.MeetRequestDAOMockSuccess{},
+		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
+	}
+	var tokenStr, _ = env.generateTokenString(mocks.RequestedId, "login")
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodGet,
+		env.GetNewRequests,
+		strings.NewReader(""),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var gotRequests = make([]*model.MeetRequest, 0)
+	var jsonErr = json.Unmarshal(rec.Body.Bytes(), &gotRequests)
+
+	assert.Nil(t, jsonErr)
+	assert.Equal(t, 0, len(gotRequests))
 }
 
 func getIncompleteToken(env *Env) (string, error) {
