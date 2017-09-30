@@ -100,7 +100,7 @@ func (env *Env) parseTokenString(tokenString string) (*jwt.Token, error) {
 	})
 }
 
-func (env *Env) getIdFromRequest(r *http.Request) (int, int, error) {
+func (env *Env) getIdFromRequest(r *http.Request) (id int, code int, err error) {
 	var headers = r.Header
 	var authHeaderList, ok = headers[authorizationStr]
 	if !ok {

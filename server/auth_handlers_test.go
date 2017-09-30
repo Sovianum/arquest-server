@@ -20,6 +20,8 @@ import (
 
 const (
 	urlSample = "URL"
+	expireDays = 100
+	tokenKey = "token90"
 )
 
 type headerPair struct {
@@ -577,8 +579,8 @@ func TestEnv_UserSignInPost_IdExtractionFail(t *testing.T) {
 func getAuthConf() config.Conf {
 	return config.Conf{
 		Auth:config.AuthConfig{
-			ExpireDays: 100,
-			TokenKey:   "token90",
+			ExpireDays: expireDays,
+			TokenKey:   tokenKey,
 		},
 	}
 }
