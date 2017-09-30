@@ -12,9 +12,9 @@
     "auth_string_template": "user=%s password=%s dbname=%s sslmode=disable"
   },
   "logic": {
-    "distance": 0.5,            // km
-    "online_timeout": 5,        // min
-    "request_expiration": 5,    // min
-    "cleanup_interval": 10      // min
+    "distance": 0.5,
+    "online_timeout": 5,
+    "request_expiration": 5,
+    "cleanup_interval": 10
   }
 }

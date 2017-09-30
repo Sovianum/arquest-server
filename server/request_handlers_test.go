@@ -22,12 +22,16 @@ const (
 )
 
 func TestEnv_CreateRequest_Success(t *testing.T) {
-	var meetRequest = model.MeetRequest{RequesterId: 1, RequestedId: 2}
+	var meetRequest = model.MeetRequest{RequesterId: mocks.RequesterId, RequestedId: mocks.RequestedId}
 	var requestMsg, jsonErr = json.Marshal(meetRequest)
 	assert.Nil(t, jsonErr)
 
-	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockSuccess{}}
-	var tokenStr, _ = env.generateTokenString(1, "login")
+	var env = &Env{
+		conf: getTotalConf(),
+		meetRequestDAO: &mocks.MeetRequestDAOMockSuccess{},
+		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
+	}
+	var tokenStr, _ = env.generateTokenString(mocks.RequesterId, "login")
 
 	var rec, recErr = getRecorder(
 		urlSample,
@@ -348,7 +352,7 @@ func TestEnv_UpdateRequest_AcceptSuccess(t *testing.T) {
 func TestEnv_UpdateRequest_AcceptNotFound(t *testing.T) {
 	var env = &Env{
 		conf:             getTotalConf(),
-		meetRequestDAO:   &mocks.MeetRequestDAOMockGetRequestByIdNotFound{},
+		meetRequestDAO:   &mocks.MeetRequestDAOMockGetPendingRequestByIdNotFound{},
 		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
 	}
 	var tokenStr, _ = env.generateTokenString(mocks.RequestedId, "login")
@@ -376,7 +380,7 @@ func TestEnv_UpdateRequest_AcceptLocked(t *testing.T) {
 		meetRequestDAO:   &mocks.MeetRequestDAOMockSuccess{},
 		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
 	}
-	var request, _ = env.meetRequestDAO.GetRequestById(1)
+	var request, _ = env.meetRequestDAO.GetPendingRequestById(1)
 	env.handleRequestAccept(request.Id, request.RequestedId)
 
 	var tokenStr, _ = env.generateTokenString(request.RequestedId, "login")
@@ -450,7 +454,7 @@ func TestEnv_UpdateRequest_Error(t *testing.T) {
 	var conn, _ = env.meetRequestCache.Get(strconv.Itoa(mocks.RequestedId))
 	var casted = conn.(*meetConnection)
 
-	assert.Equal(t, 0, len(casted.requestMap[mocks.RequestedId]))
+	assert.Equal(t, 0, len(casted.requestMap))
 }
 
 func getIncompleteToken(env *Env) (string, error) {

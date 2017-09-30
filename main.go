@@ -8,8 +8,7 @@ import (
 )
 
 const (
-	dbConfFile = "resources/conf/db_conf.json"
-	authConfFile = "resources/conf/auth_conf.json"
+	confFile = "resources/conf/config.json"
 )
 
 func main() {
@@ -36,31 +35,31 @@ func main() {
 }
 
 func getAuthConf() config.AuthConfig {
-	var file, confErr = os.Open(authConfFile)
+	var file, confErr = os.Open(confFile)
 	if confErr != nil {
 		panic(confErr)
 	}
 	defer file.Close()
 
-	var conf, err = config.ReadAuthConf(file)
+	var conf, err = config.ReadConf(file)
 	if err != nil {
 		panic(err)
 	}
 
-	return conf
+	return conf.Auth
 }
 
 func getDBConf() config.DBConfig {
-	var file, confErr = os.Open(dbConfFile)
+	var file, confErr = os.Open(confFile)
 	if confErr != nil {
 		panic(confErr)
 	}
 	defer file.Close()
 
-	var conf, err = config.ReadDBConfig(file)
+	var conf, err = config.ReadConf(file)
 	if err != nil {
 		panic(err)
 	}
 
-	return conf
+	return conf.DB
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/Sovianum/acquaintanceServer/model"
 	"time"
+	"github.com/Sovianum/acquaintanceServer/dao"
 )
 
 const (
@@ -18,13 +19,13 @@ const (
 type createRequestFuncType func(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (int, error)
 type getRequestsFuncType func(requestedId int) ([]*model.MeetRequest, error)
 type updateRequestFuncType func(id int, requestedId int, status string) (int, error)
-type getRequestByIdFuncType func(id int) (*model.MeetRequest, error)
+type getPendingRequestByIdFuncType func(id int) (*model.MeetRequest, error)
 
 var createRequestSuccess createRequestFuncType = func(int, int, int, float64) (int, error) {
 	return 1, nil
 }
 var createRequestConflict createRequestFuncType = func(int, int, int, float64) (int, error) {
-	return 0, nil
+	return dao.ImpossibleID, nil
 }
 var createRequestError createRequestFuncType = func(int, int, int, float64) (int, error) {
 	return 0, errors.New(createErr)
@@ -53,7 +54,7 @@ var updateRequestError updateRequestFuncType = func(int, int, string) (int, erro
 	return 0, errors.New(acceptError)
 }
 
-var getRequestByIdSuccess getRequestByIdFuncType = func(id int) (*model.MeetRequest, error) {
+var getPendingRequestByIdSuccess getPendingRequestByIdFuncType = func(id int) (*model.MeetRequest, error) {
 	return &model.MeetRequest{
 		Time:        model.QuotedTime(time.Now()),
 		Status:      model.StatusPending,
@@ -62,7 +63,7 @@ var getRequestByIdSuccess getRequestByIdFuncType = func(id int) (*model.MeetRequ
 		Id:          id,
 	}, nil
 }
-var getRequestByIdNotFound getRequestByIdFuncType = func(id int) (*model.MeetRequest, error) {
+var getPendingRequestByIdNotFound getPendingRequestByIdFuncType = func(id int) (*model.MeetRequest, error) {
 	return nil, errors.New("not found")
 }
 
@@ -80,8 +81,8 @@ func (*MeetRequestDAOMockSuccess) UpdateRequest(id int, requestedId int, status 
 	return updateRequestSuccess(id, requestedId, status)
 }
 
-func (*MeetRequestDAOMockSuccess) GetRequestById(id int) (*model.MeetRequest, error) {
-	return getRequestByIdSuccess(id)
+func (*MeetRequestDAOMockSuccess) GetPendingRequestById(id int) (*model.MeetRequest, error) {
+	return getPendingRequestByIdSuccess(id)
 }
 
 type MeetRequestDAOMockCreateConflict struct{}
@@ -98,8 +99,8 @@ func (*MeetRequestDAOMockCreateConflict) UpdateRequest(id int, requestedId int, 
 	return updateRequestSuccess(id, requestedId, status)
 }
 
-func (*MeetRequestDAOMockCreateConflict) GetRequestById(id int) (*model.MeetRequest, error) {
-	return getRequestByIdSuccess(id)
+func (*MeetRequestDAOMockCreateConflict) GetPendingRequestById(id int) (*model.MeetRequest, error) {
+	return getPendingRequestByIdSuccess(id)
 }
 
 type MeetRequestDAOMockCreateError struct{}
@@ -116,8 +117,8 @@ func (*MeetRequestDAOMockCreateError) UpdateRequest(id int, requestedId int, sta
 	return updateRequestSuccess(id, requestedId, status)
 }
 
-func (*MeetRequestDAOMockCreateError) GetRequestById(id int) (*model.MeetRequest, error) {
-	return getRequestByIdSuccess(id)
+func (*MeetRequestDAOMockCreateError) GetPendingRequestById(id int) (*model.MeetRequest, error) {
+	return getPendingRequestByIdSuccess(id)
 }
 
 type MeetRequestDAOMockGetRequestsEmpty struct{}
@@ -134,8 +135,8 @@ func (*MeetRequestDAOMockGetRequestsEmpty) UpdateRequest(id int, requestedId int
 	return updateRequestSuccess(id, requestedId, status)
 }
 
-func (*MeetRequestDAOMockGetRequestsEmpty) GetRequestById(id int) (*model.MeetRequest, error) {
-	return getRequestByIdSuccess(id)
+func (*MeetRequestDAOMockGetRequestsEmpty) GetPendingRequestById(id int) (*model.MeetRequest, error) {
+	return getPendingRequestByIdSuccess(id)
 }
 
 type MeetRequestDAOMockGetRequestsError struct{}
@@ -152,8 +153,8 @@ func (*MeetRequestDAOMockGetRequestsError) UpdateRequest(id int, requestedId int
 	return updateRequestSuccess(id, requestedId, status)
 }
 
-func (*MeetRequestDAOMockGetRequestsError) GetRequestById(id int) (*model.MeetRequest, error) {
-	return getRequestByIdSuccess(id)
+func (*MeetRequestDAOMockGetRequestsError) GetPendingRequestById(id int) (*model.MeetRequest, error) {
+	return getPendingRequestByIdSuccess(id)
 }
 
 type MeetRequestDAOMockUpdateNoRequest struct{}
@@ -170,8 +171,8 @@ func (*MeetRequestDAOMockUpdateNoRequest) UpdateRequest(id int, requestedId int,
 	return updateRequestNoRequest(id, requestedId, status)
 }
 
-func (*MeetRequestDAOMockUpdateNoRequest) GetRequestById(id int) (*model.MeetRequest, error) {
-	return getRequestByIdSuccess(id)
+func (*MeetRequestDAOMockUpdateNoRequest) GetPendingRequestById(id int) (*model.MeetRequest, error) {
+	return getPendingRequestByIdSuccess(id)
 }
 
 type MeetRequestDAOMockUpdateError struct{}
@@ -188,24 +189,24 @@ func (*MeetRequestDAOMockUpdateError) UpdateRequest(id int, requestedId int, sta
 	return updateRequestError(id, requestedId, status)
 }
 
-func (*MeetRequestDAOMockUpdateError) GetRequestById(id int) (*model.MeetRequest, error) {
-	return getRequestByIdSuccess(id)
+func (*MeetRequestDAOMockUpdateError) GetPendingRequestById(id int) (*model.MeetRequest, error) {
+	return getPendingRequestByIdSuccess(id)
 }
 
-type MeetRequestDAOMockGetRequestByIdNotFound struct{}
+type MeetRequestDAOMockGetPendingRequestByIdNotFound struct{}
 
-func (*MeetRequestDAOMockGetRequestByIdNotFound) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error) {
+func (*MeetRequestDAOMockGetPendingRequestByIdNotFound) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error) {
 	return createRequestSuccess(requesterId, requestedId, requestTimeoutMin, maxDistance)
 }
 
-func (*MeetRequestDAOMockGetRequestByIdNotFound) GetRequests(requestedId int) ([]*model.MeetRequest, error) {
+func (*MeetRequestDAOMockGetPendingRequestByIdNotFound) GetRequests(requestedId int) ([]*model.MeetRequest, error) {
 	return getRequestsSuccess(requestedId)
 }
 
-func (*MeetRequestDAOMockGetRequestByIdNotFound) UpdateRequest(id int, requestedId int, status string) (int, error) {
+func (*MeetRequestDAOMockGetPendingRequestByIdNotFound) UpdateRequest(id int, requestedId int, status string) (int, error) {
 	return updateRequestSuccess(id, requestedId, status)
 }
 
-func (*MeetRequestDAOMockGetRequestByIdNotFound) GetRequestById(id int) (*model.MeetRequest, error) {
-	return getRequestByIdNotFound(id)
+func (*MeetRequestDAOMockGetPendingRequestByIdNotFound) GetPendingRequestById(id int) (*model.MeetRequest, error) {
+	return getPendingRequestByIdNotFound(id)
 }

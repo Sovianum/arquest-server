@@ -38,7 +38,7 @@ func TestMeetRequestDAO_GetRequestById_Success(t *testing.T) {
 	}
 
 	var meetRequestDAO = NewMeetDAO(db)
-	var dbRequest, dbErr = meetRequestDAO.GetRequestById(1)
+	var dbRequest, dbErr = meetRequestDAO.GetPendingRequestById(1)
 
 	assert.Nil(t, dbErr)
 	assert.Equal(t, *request, *dbRequest)
@@ -60,7 +60,7 @@ func TestMeetRequestDAO_GetRequestById_NotFound(t *testing.T) {
 	)
 
 	var meetRequestDAO = NewMeetDAO(db)
-	var _, dbErr = meetRequestDAO.GetRequestById(1)
+	var _, dbErr = meetRequestDAO.GetPendingRequestById(1)
 
 	assert.NotNil(t, dbErr)
 }
@@ -159,7 +159,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 		createErrIsNil bool
 		createErrMsg   string
 
-		expectedRowsAffected int
+		expectedId int
 	}{
 		{
 			requesterId:       1,
@@ -174,7 +174,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 
 			createErrIsNil: true,
 
-			expectedRowsAffected: 1,
+			expectedId: 100,
 		},
 		{
 			requesterId:       1,
@@ -189,7 +189,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 
 			createErrIsNil: true,
 
-			expectedRowsAffected: 0,
+			expectedId: ImpossibleID,
 		},
 		{
 			requesterId:       1,
@@ -204,7 +204,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 
 			createErrIsNil: true,
 
-			expectedRowsAffected: 0,
+			expectedId: ImpossibleID,
 		},
 		{
 			requesterId:       1,
@@ -219,7 +219,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 
 			createErrIsNil: true,
 
-			expectedRowsAffected: 0,
+			expectedId: ImpossibleID,
 		},
 		{
 			requesterId:       1,
@@ -234,7 +234,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 
 			createErrIsNil: true,
 
-			expectedRowsAffected: 0,
+			expectedId: ImpossibleID,
 		},
 		{
 			requesterId:       1,
@@ -250,7 +250,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 			createErrIsNil: false,
 			createErrMsg: "createErr",
 
-			expectedRowsAffected: 0,
+			expectedId: ImpossibleID,
 		},
 	}
 
@@ -263,12 +263,12 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 
 		if testCase.countErrIsNil {
 			mock.
-				ExpectQuery("SELECT").
+				ExpectQuery("SELECT count").
 				WithArgs(testCase.requesterId, testCase.requestedId).
 				WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(testCase.countRes...))
 		} else {
 			mock.
-				ExpectQuery("SELECT").
+				ExpectQuery("SELECT count").
 				WithArgs(testCase.requesterId, testCase.requestedId).
 				WillReturnError(errors.New(testCase.countErrMsg))
 		}
@@ -287,23 +287,29 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 			}
 		}
 
+		mock.ExpectBegin()
 		if testCase.countErrIsNil && testCase.accessErrIsNil {
 			if testCase.createErrIsNil {
 				mock.
 					ExpectExec("INSERT").
 					WithArgs(testCase.requesterId, testCase.requestedId).
 					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.
+				ExpectQuery("SELECT").
+					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(100))
+				mock.ExpectCommit()
 			} else {
 				mock.
 					ExpectExec("INSERT").
 					WithArgs(testCase.requesterId, testCase.requestedId).
 					WillReturnError(errors.New(testCase.createErrMsg))
+				mock.ExpectRollback()
 			}
 		}
 
 		var meetRequestDAO = NewMeetDAO(db)
 
-		var rowsAffected, dbErr = meetRequestDAO.CreateRequest(testCase.requesterId, testCase.requestedId, testCase.requestTimeOutMin, testCase.maxDistance)
+		var lastId, dbErr = meetRequestDAO.CreateRequest(testCase.requesterId, testCase.requestedId, testCase.requestTimeOutMin, testCase.maxDistance)
 
 		if testCase.countErrIsNil && testCase.accessErrIsNil && testCase.createErrIsNil {
 			assert.Nil(t, dbErr, strconv.Itoa(i))
@@ -319,7 +325,7 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 
 			assert.Equal(t, msg, dbErr.Error(), strconv.Itoa(i))
 		}
-		assert.Equal(t, testCase.expectedRowsAffected, rowsAffected, strconv.Itoa(i))
+		assert.Equal(t, testCase.expectedId, lastId, strconv.Itoa(i))
 
 		db.Close()
 	}

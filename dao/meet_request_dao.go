@@ -38,14 +38,21 @@ const (
 		UPDATE MeetRequest SET status = $1 WHERE id = $2 AND requestedId = $3
 	`
 	getRequestById = `
-		SELECT id, requesterId, requestedId, status, time FROM MeetRequest WHERE id = $1
+		SELECT id, requesterId, requestedId, status, time FROM MeetRequest WHERE id = $1 AND status = 'PENDING'
+	`
+	getLasRequestId = `
+		SELECT max(id) FROM MeetRequest
 	`
 )
 
+const (
+	ImpossibleID = -1
+)
+
 type MeetRequestDAO interface {
-	CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error)
+	CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (id int, dbErr error)
 	GetRequests(requestedId int) ([]*model.MeetRequest, error)
-	GetRequestById(id int) (*model.MeetRequest, error)
+	GetPendingRequestById(id int) (*model.MeetRequest, error)
 	UpdateRequest(id int, requestedId int, status string) (int, error)
 }
 
@@ -59,7 +66,7 @@ func NewMeetDAO(db *sql.DB) MeetRequestDAO {
 	}
 }
 
-func (dao *meetRequestDAO) GetRequestById(id int) (*model.MeetRequest, error) {
+func (dao *meetRequestDAO) GetPendingRequestById(id int) (*model.MeetRequest, error) {
 	var r = new(model.MeetRequest)
 	var err = dao.db.QueryRow(getRequestById, id).Scan(&r.Id, &r.RequesterId, &r.RequestedId, &r.Status, &r.Time)
 	if err != nil {
@@ -75,29 +82,43 @@ func (dao *meetRequestDAO) GetRequests(requestedId int) ([]*model.MeetRequest, e
 func (dao *meetRequestDAO) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (int, error) {
 	var requestCnt, countErr = dao.countPendingRequests(requesterId, requestedId)
 	if countErr != nil {
-		return 0, countErr
+		return ImpossibleID, countErr
 	}
 
 	if requestCnt > 0 {
-		return 0, nil
+		return ImpossibleID, nil
 	}
 
 	var accessible, accessErr = dao.isAccessible(requesterId, requestedId, maxDistance, requestTimeoutMin)
 	if accessErr != nil {
-		return 0, accessErr
+		return ImpossibleID, accessErr
 	}
 
 	if !accessible {
-		return 0, nil
+		return ImpossibleID, nil
 	}
 
-	var result, createErr = dao.db.Exec(createRequest, requesterId, requestedId)
+	var tx, txError = dao.db.Begin()
+	if txError != nil {
+		tx.Rollback()
+		return ImpossibleID, txError
+	}
+
+	var _, createErr = tx.Exec(createRequest, requesterId, requestedId)
 	if createErr != nil {
-		return 0, createErr
+		tx.Rollback()
+		return ImpossibleID, createErr
 	}
 
-	var rowsAffected, rowsErr = result.RowsAffected()
-	return int(rowsAffected), rowsErr
+	var lastId int
+	var lastIdErr = tx.QueryRow(getLasRequestId).Scan(&lastId)
+	if lastIdErr != nil {
+		tx.Rollback()
+		return ImpossibleID, lastIdErr
+	}
+
+	tx.Commit()
+	return lastId, nil
 }
 
 func (dao *meetRequestDAO) UpdateRequest(id int, requestedId int, status string) (int, error) {

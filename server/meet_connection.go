@@ -11,7 +11,7 @@ const (
 	userHasAlreadyAcceptedRequest = "user has already accepted request"
 )
 
-type requestMapType map[int]map[int]*model.MeetRequest
+type requestMapType map[int]*model.MeetRequest
 
 func NewMeetConnection() MeetConnection {
 	return &meetConnection{
@@ -26,7 +26,8 @@ func NewMeetConnection() MeetConnection {
 type MeetConnection interface {
 	AddAccept(request *model.MeetRequest) error
 	AddDecline(request *model.MeetRequest)
-	Remove(requestId int, userId int)
+	AddPending(request *model.MeetRequest)
+	Remove(requestId int)
 	GetAll(seconds int) []*model.MeetRequest
 }
 
@@ -52,11 +53,7 @@ func (conn *meetConnection) AddAccept(request *model.MeetRequest) error {
 	requestCopy.Status = model.StatusAccepted
 	*requestCopy = *request
 
-	var _, ok = conn.requestMap[request.RequestedId]
-	if !ok {
-		conn.requestMap[request.RequestedId] = make(map[int]*model.MeetRequest)
-	}
-	conn.requestMap[request.RequestedId][request.Id] = requestCopy
+	conn.requestMap[request.Id] = requestCopy
 	conn.requestsLock.Unlock()
 
 	select {
@@ -68,30 +65,15 @@ func (conn *meetConnection) AddAccept(request *model.MeetRequest) error {
 }
 
 func (conn *meetConnection) AddDecline(request *model.MeetRequest) {
-	conn.requestsLock.Lock()
-	var requestCopy = new(model.MeetRequest)
-	*requestCopy = *request
-	requestCopy.Status = model.StatusDeclined
-
-	var _, ok = conn.requestMap[request.RequestedId]
-	if !ok {
-		conn.requestMap[request.RequestedId] = make(map[int]*model.MeetRequest)
-	}
-	conn.requestMap[request.RequestedId][request.Id] = requestCopy
-	conn.requestsLock.Unlock()
-
-	select {
-	case conn.syncChan <- 1:
-	default:
-	}
+	conn.addNonAccept(request, model.StatusDeclined)
 }
 
-func (conn *meetConnection) Remove(requestId int, userId int) {
-	var _, ok = conn.requestMap[userId]
-	if !ok {
-		return
-	}
-	delete(conn.requestMap[userId], requestId)
+func (conn *meetConnection) AddPending(request *model.MeetRequest) {
+	conn.addNonAccept(request, model.StatusPending)
+}
+
+func (conn *meetConnection) Remove(requestId int) {
+	delete(conn.requestMap, requestId)
 }
 
 func (conn *meetConnection) GetAll(seconds int) []*model.MeetRequest {
@@ -100,10 +82,8 @@ func (conn *meetConnection) GetAll(seconds int) []*model.MeetRequest {
 	select {
 	case <-conn.syncChan:
 		conn.requestsLock.Lock()
-		for _, innerMap := range conn.requestMap {
-			for _, request := range innerMap {
-				result= append(result, request)
-			}
+		for _, request := range conn.requestMap {
+			result= append(result, request)
 		}
 		conn.requestMap = make(requestMapType)
 		conn.requestsLock.Unlock()
@@ -114,4 +94,19 @@ func (conn *meetConnection) GetAll(seconds int) []*model.MeetRequest {
 	conn.accepted = false
 	conn.acceptedLock.Unlock()
 	return result
+}
+
+func (conn *meetConnection) addNonAccept(request *model.MeetRequest, status string) {
+	conn.requestsLock.Lock()
+	var requestCopy = new(model.MeetRequest)
+	*requestCopy = *request
+	requestCopy.Status = status
+
+	conn.requestMap[request.Id] = requestCopy
+	conn.requestsLock.Unlock()
+
+	select {
+	case conn.syncChan <- 1:
+	default:
+	}
 }

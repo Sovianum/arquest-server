@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"github.com/patrickmn/go-cache"
 	"fmt"
+	"github.com/Sovianum/acquaintanceServer/dao"
 )
 
 const (
@@ -35,7 +36,7 @@ func (env *Env) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var rowsAffected, dbErr = env.meetRequestDAO.CreateRequest(
+	var requestId, dbErr = env.meetRequestDAO.CreateRequest(
 		meetRequest.RequesterId, meetRequest.RequestedId, env.conf.Logic.RequestExpiration, env.conf.Logic.Distance,
 	)
 	if dbErr != nil {
@@ -43,9 +44,14 @@ func (env *Env) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		w.Write(common.GetErrorJson(dbErr))
 		return
 	}
-	if rowsAffected == 0 {
+	if requestId == dao.ImpossibleID {
 		w.WriteHeader(http.StatusConflict)
 		return
+	}
+	var code, err = env.handleRequestPending(requestId, userId)
+	if err != nil {
+		w.WriteHeader(code)
+		w.Write(common.GetErrorJson(err))
 	}
 }
 
@@ -84,6 +90,8 @@ func (env *Env) UpdateRequest(w http.ResponseWriter, r *http.Request) {
 		w.Write(common.GetErrorJson(tokenErr))
 	}
 
+	// here cache is is used before accessing database
+	// cos when checking incoming requests, only pending requests are taken into account
 	switch update.Status {
 	case model.StatusAccepted:
 		var code, err = env.handleRequestAccept(update.Id, userId)
@@ -121,35 +129,52 @@ func (env *Env) revertCache(requestId int, userId int) {
 		return
 	}
 
-	connect.(MeetConnection).Remove(requestId, userId)
+	connect.(MeetConnection).Remove(requestId)
 }
 
 func (env *Env) handleRequestAccept(requestId int, userId int) (int, error) {
-	var f = func(connection MeetConnection, request *model.MeetRequest) (int, error) {
+	var connectionFunc = func(connection MeetConnection, request *model.MeetRequest) (int, error) {
 		if err := connection.AddAccept(request); err != nil {
 			return http.StatusUnavailableForLegalReasons, errors.New(alreadyAccepted)
 		}
 		return http.StatusOK, nil
 	}
-
-	return env.handleRequestUpdate(f, requestId, userId)
+	var rightsCheckFunc = func(request *model.MeetRequest, userId int) bool {return request.RequestedId == userId}
+	return env.handleRequestUpdate(connectionFunc, rightsCheckFunc, requestId, userId)
 }
 
 func (env *Env) handleRequestDecline(requestId int, userId int) (int, error) {
-	var f = func(connection MeetConnection, request *model.MeetRequest) (int, error) {
+	var connectionFunc = func(connection MeetConnection, request *model.MeetRequest) (int, error) {
 		connection.AddDecline(request)
 		return http.StatusOK, nil
 	}
-	return env.handleRequestUpdate(f, requestId, userId)
+	var rightsCheckFunc = func(request *model.MeetRequest, userId int) bool {return request.RequestedId == userId}
+	return env.handleRequestUpdate(connectionFunc, rightsCheckFunc, requestId, userId)
 }
 
-func (env *Env) handleRequestUpdate(f func(MeetConnection, *model.MeetRequest) (int, error), requestId int, userId int) (int, error) {
-	var request, requestErr = env.meetRequestDAO.GetRequestById(requestId)
-	if requestErr != nil || request.Status != model.StatusPending {
+func (env *Env) handleRequestPending(requestId int, userId int) (int, error) {
+	var connectionFunc = func(connection MeetConnection, request *model.MeetRequest) (int, error) {
+		connection.AddPending(request)
+		return http.StatusOK, nil
+	}
+	var rightsCheckFunc = func(request *model.MeetRequest, userId int) bool {
+		return request.RequesterId == userId
+	}
+	return env.handleRequestUpdate(connectionFunc, rightsCheckFunc, requestId, userId)
+}
+
+func (env *Env) handleRequestUpdate(
+	connectionFunc func(MeetConnection, *model.MeetRequest) (int, error),
+	rightsCheckFunc func(request *model.MeetRequest, userId int) bool,
+	requestId int,
+	userId int,
+) (int, error) {
+	var request, requestErr = env.meetRequestDAO.GetPendingRequestById(requestId)
+	if requestErr != nil {
 		return http.StatusNotFound, requestErr
 	}
 
-	if request.RequestedId != userId {
+	if !rightsCheckFunc(request, userId) {
 		return http.StatusNotFound, errors.New(requestNotFound)
 	}
 
@@ -164,7 +189,7 @@ func (env *Env) handleRequestUpdate(f func(MeetConnection, *model.MeetRequest) (
 		return http.StatusInternalServerError, fmt.Errorf("failed to cast connect. Type: %T", connect)
 	}
 
-	return f(casted, request)
+	return connectionFunc(casted, request)
 }
 
 func parseRequestUpdate(r *http.Request) (*model.MeetRequestUpdate, int, error) {
