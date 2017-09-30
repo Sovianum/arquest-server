@@ -45,7 +45,7 @@ func (env *Env) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if rowsAffected == 0 {
-		w.WriteHeader(http.StatusForbidden)
+		w.WriteHeader(http.StatusConflict)
 		return
 	}
 }
