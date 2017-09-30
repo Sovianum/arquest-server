@@ -1,25 +1,32 @@
 package server
 
 import (
-	"github.com/Sovianum/acquaintanceServer/config"
-	"testing"
-	"github.com/stretchr/testify/assert"
-	"strings"
 	"encoding/json"
-	"net/http"
-	"github.com/Sovianum/acquaintanceServer/server/mocks"
-	"github.com/Sovianum/acquaintanceServer/model"
 	"fmt"
-	"time"
+	"github.com/Sovianum/acquaintanceServer/config"
+	"github.com/Sovianum/acquaintanceServer/model"
+	"github.com/Sovianum/acquaintanceServer/server/mocks"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/patrickmn/go-cache"
+	"github.com/stretchr/testify/assert"
+	"net/http"
+	"strings"
+	"testing"
+	"time"
+	"strconv"
+)
+
+const (
+	defaultExpiration = 5
+	defaultCleanup    = 10
 )
 
 func TestEnv_CreateRequest_Success(t *testing.T) {
-	var meetRequest = model.MeetRequest{RequesterId:1, RequestedId:2}
+	var meetRequest = model.MeetRequest{RequesterId: 1, RequestedId: 2}
 	var requestMsg, jsonErr = json.Marshal(meetRequest)
 	assert.Nil(t, jsonErr)
 
-	var env = &Env{conf:getTotalConf(), meetRequestDAO:&mocks.MeetRequestDAOMockSuccess{}}
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockSuccess{}}
 	var tokenStr, _ = env.generateTokenString(1, "login")
 
 	var rec, recErr = getRecorder(
@@ -36,7 +43,7 @@ func TestEnv_CreateRequest_Success(t *testing.T) {
 }
 
 func TestEnv_CreateRequest_NoIdInToken(t *testing.T) {
-	var env = &Env{conf:getTotalConf(), meetRequestDAO:&mocks.MeetRequestDAOMockSuccess{}}
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockSuccess{}}
 	var tokenStr, _ = getIncompleteToken(env)
 
 	var rec, recErr = getRecorder(
@@ -53,7 +60,7 @@ func TestEnv_CreateRequest_NoIdInToken(t *testing.T) {
 }
 
 func TestEnv_CreateRequest_BadToken(t *testing.T) {
-	var env = &Env{conf:getTotalConf(), meetRequestDAO:&mocks.MeetRequestDAOMockSuccess{}}
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockSuccess{}}
 	var tokenStr = "Bad token"
 
 	var rec, recErr = getRecorder(
@@ -70,11 +77,11 @@ func TestEnv_CreateRequest_BadToken(t *testing.T) {
 }
 
 func TestEnv_CreateRequest_WrongRequesterId(t *testing.T) {
-	var meetRequest = model.MeetRequest{RequesterId:3, RequestedId:2}
+	var meetRequest = model.MeetRequest{RequesterId: 3, RequestedId: 2}
 	var requestMsg, jsonErr = json.Marshal(meetRequest)
 	assert.Nil(t, jsonErr)
 
-	var env = &Env{conf:getTotalConf(), meetRequestDAO:&mocks.MeetRequestDAOMockSuccess{}}
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockSuccess{}}
 	var tokenStr, _ = env.generateTokenString(1, "login")
 
 	var rec, recErr = getRecorder(
@@ -91,11 +98,11 @@ func TestEnv_CreateRequest_WrongRequesterId(t *testing.T) {
 }
 
 func TestEnv_CreateRequest_Conflict(t *testing.T) {
-	var meetRequest = model.MeetRequest{RequesterId:1, RequestedId:2}
+	var meetRequest = model.MeetRequest{RequesterId: 1, RequestedId: 2}
 	var requestMsg, jsonErr = json.Marshal(meetRequest)
 	assert.Nil(t, jsonErr)
 
-	var env = &Env{conf:getTotalConf(), meetRequestDAO:&mocks.MeetRequestDAOMockCreateConflict{}}
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockCreateConflict{}}
 	var tokenStr, _ = env.generateTokenString(1, "login")
 
 	var rec, recErr = getRecorder(
@@ -112,11 +119,11 @@ func TestEnv_CreateRequest_Conflict(t *testing.T) {
 }
 
 func TestEnv_CreateRequest_Error(t *testing.T) {
-	var meetRequest = model.MeetRequest{RequesterId:1, RequestedId:2}
+	var meetRequest = model.MeetRequest{RequesterId: 1, RequestedId: 2}
 	var requestMsg, jsonErr = json.Marshal(meetRequest)
 	assert.Nil(t, jsonErr)
 
-	var env = &Env{conf:getTotalConf(), meetRequestDAO:&mocks.MeetRequestDAOMockCreateError{}}
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockCreateError{}}
 	var tokenStr, _ = env.generateTokenString(1, "login")
 
 	var rec, recErr = getRecorder(
@@ -133,7 +140,7 @@ func TestEnv_CreateRequest_Error(t *testing.T) {
 }
 
 func TestEnv_GetRequests_Success(t *testing.T) {
-	var env = &Env{conf:getTotalConf(), meetRequestDAO:&mocks.MeetRequestDAOMockSuccess{}}
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockSuccess{}}
 	var tokenStr, _ = env.generateTokenString(1, "login")
 
 	var rec, recErr = getRecorder(
@@ -160,7 +167,7 @@ func TestEnv_GetRequests_Success(t *testing.T) {
 }
 
 func TestEnv_GetRequests_Empty(t *testing.T) {
-	var env = &Env{conf:getTotalConf(), meetRequestDAO:&mocks.MeetRequestDAOMockGetRequestsEmpty{}}
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockGetRequestsEmpty{}}
 	var tokenStr, _ = env.generateTokenString(1, "login")
 
 	var rec, recErr = getRecorder(
@@ -187,7 +194,7 @@ func TestEnv_GetRequests_Empty(t *testing.T) {
 }
 
 func TestEnv_GetRequests_NoIdInToken(t *testing.T) {
-	var env = &Env{conf:getTotalConf(), meetRequestDAO:&mocks.MeetRequestDAOMockSuccess{}}
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockSuccess{}}
 	var tokenStr, _ = getIncompleteToken(env)
 
 	var rec, recErr = getRecorder(
@@ -204,7 +211,7 @@ func TestEnv_GetRequests_NoIdInToken(t *testing.T) {
 }
 
 func TestEnv_GetRequests_BadToken(t *testing.T) {
-	var env = &Env{conf:getTotalConf(), meetRequestDAO:&mocks.MeetRequestDAOMockSuccess{}}
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockSuccess{}}
 	var tokenStr = "Bad token"
 
 	var rec, recErr = getRecorder(
@@ -221,7 +228,7 @@ func TestEnv_GetRequests_BadToken(t *testing.T) {
 }
 
 func TestEnv_GetRequests_Error(t *testing.T) {
-	var env = &Env{conf:getTotalConf(), meetRequestDAO:&mocks.MeetRequestDAOMockGetRequestsError{}}
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockGetRequestsError{}}
 	var tokenStr, _ = env.generateTokenString(1, "login")
 
 	var rec, recErr = getRecorder(
@@ -237,11 +244,91 @@ func TestEnv_GetRequests_Error(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 }
 
-func TestEnv_UpdateRequest_Success(t *testing.T) {
-	var env = &Env{conf:getTotalConf(), meetRequestDAO:&mocks.MeetRequestDAOMockSuccess{}}
+func TestEnv_UpdateRequest_NoIdInToken(t *testing.T) {
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockSuccess{}}
+	var tokenStr, _ = getIncompleteToken(env)
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UpdateRequest,
+		strings.NewReader(""),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestEnv_UpdateRequest_BadToken(t *testing.T) {
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockSuccess{}}
+	var tokenStr = "bad string"
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UpdateRequest,
+		strings.NewReader(""),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestEnv_UpdateRequest_NoRequest(t *testing.T) {
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockUpdateNoRequest{}}
 	var tokenStr, _ = env.generateTokenString(1, "login")
 
-	var update = model.MeetRequestUpdate{Id:1, Status:model.StatusAccepted}
+	var update = model.MeetRequestUpdate{Id: 1, Status: model.StatusAccepted}
+	var requestMsg, err = json.Marshal(update)
+	assert.Nil(t, err)
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UpdateRequest,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestEnv_UpdateRequest_BadStatus(t *testing.T) {
+	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockUpdateNoRequest{}}
+	var tokenStr, _ = env.generateTokenString(1, "login")
+
+	var update = model.MeetRequestUpdate{Id: 1, Status: "BAD"}
+	var requestMsg, err = json.Marshal(update)
+	assert.Nil(t, err)
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UpdateRequest,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestEnv_UpdateRequest_AcceptSuccess(t *testing.T) {
+	var env = &Env{
+		conf:             getTotalConf(),
+		meetRequestDAO:   &mocks.MeetRequestDAOMockSuccess{},
+		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
+	}
+	var tokenStr, _ = env.generateTokenString(mocks.RequestedId, "login")
+
+	var update = model.MeetRequestUpdate{Id: mocks.RequestedId, Status: model.StatusAccepted}
 	var requestMsg, err = json.Marshal(update)
 	assert.Nil(t, err)
 
@@ -256,6 +343,114 @@ func TestEnv_UpdateRequest_Success(t *testing.T) {
 
 	assert.Nil(t, recErr)
 	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestEnv_UpdateRequest_AcceptNotFound(t *testing.T) {
+	var env = &Env{
+		conf:             getTotalConf(),
+		meetRequestDAO:   &mocks.MeetRequestDAOMockGetRequestByIdNotFound{},
+		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
+	}
+	var tokenStr, _ = env.generateTokenString(mocks.RequestedId, "login")
+
+	var update = model.MeetRequestUpdate{Id: mocks.RequestedId, Status: model.StatusAccepted}
+	var requestMsg, err = json.Marshal(update)
+	assert.Nil(t, err)
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UpdateRequest,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestEnv_UpdateRequest_AcceptLocked(t *testing.T) {
+	var env = &Env{
+		conf:             getTotalConf(),
+		meetRequestDAO:   &mocks.MeetRequestDAOMockSuccess{},
+		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
+	}
+	var request, _ = env.meetRequestDAO.GetRequestById(1)
+	env.handleRequestAccept(request.Id, request.RequestedId)
+
+	var tokenStr, _ = env.generateTokenString(request.RequestedId, "login")
+
+	var update = model.MeetRequestUpdate{Id: request.RequestedId, Status: model.StatusAccepted}
+	var requestMsg, err = json.Marshal(update)
+	assert.Nil(t, err)
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UpdateRequest,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusUnavailableForLegalReasons, rec.Code)
+}
+
+func TestEnv_UpdateRequest_DeclineSuccess(t *testing.T) {
+	var env = &Env{
+		conf:             getTotalConf(),
+		meetRequestDAO:   &mocks.MeetRequestDAOMockSuccess{},
+		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
+	}
+	var tokenStr, _ = env.generateTokenString(mocks.RequestedId, "login")
+
+	var update = model.MeetRequestUpdate{Id: mocks.RequestedId, Status: model.StatusDeclined}
+	var requestMsg, err = json.Marshal(update)
+	assert.Nil(t, err)
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UpdateRequest,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestEnv_UpdateRequest_Error(t *testing.T) {
+	var env = &Env{
+		conf: getTotalConf(),
+		meetRequestDAO: &mocks.MeetRequestDAOMockUpdateError{},
+		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
+	}
+	var tokenStr, _ = env.generateTokenString(mocks.RequestedId, "login")
+
+	var update = model.MeetRequestUpdate{Id: 1, Status: model.StatusAccepted}
+	var requestMsg, err = json.Marshal(update)
+	assert.Nil(t, err)
+
+	var rec, recErr = getRecorder(
+		urlSample,
+		http.MethodPost,
+		env.UpdateRequest,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
+	)
+
+	assert.Nil(t, recErr)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	var conn, _ = env.meetRequestCache.Get(strconv.Itoa(mocks.RequestedId))
+	var casted = conn.(*meetConnection)
+
+	assert.Equal(t, 0, len(casted.requestMap[mocks.RequestedId]))
 }
 
 func getIncompleteToken(env *Env) (string, error) {

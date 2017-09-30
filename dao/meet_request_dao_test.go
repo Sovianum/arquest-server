@@ -11,6 +11,60 @@ import (
 	"time"
 )
 
+func TestMeetRequestDAO_GetRequestById_Success(t *testing.T) {
+	var db, mock, err = sqlmock.New()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var date = time.Date(2003, 10, 17, 0, 0, 0, 0, time.UTC)
+
+	mock.
+	ExpectQuery("SELECT").
+		WithArgs(1).
+		WillReturnRows(
+		sqlmock.NewRows([]string{"id", "requesterId", "requestedId", "status", "time"}).
+			AddRow(1, 2, 3, model.StatusPending, date),
+	)
+
+	var request = &model.MeetRequest{
+		Id:          1,
+		RequesterId: 2,
+		RequestedId: 3,
+		Time:        model.QuotedTime(date),
+		Status:      model.StatusPending,
+	}
+
+	var meetRequestDAO = NewMeetDAO(db)
+	var dbRequest, dbErr = meetRequestDAO.GetRequestById(1)
+
+	assert.Nil(t, dbErr)
+	assert.Equal(t, *request, *dbRequest)
+}
+
+func TestMeetRequestDAO_GetRequestById_NotFound(t *testing.T) {
+	var db, mock, err = sqlmock.New()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	mock.
+	ExpectQuery("SELECT").
+		WithArgs(1).
+		WillReturnRows(
+		sqlmock.NewRows([]string{"id", "requesterId", "requestedId", "status", "time"}),
+	)
+
+	var meetRequestDAO = NewMeetDAO(db)
+	var _, dbErr = meetRequestDAO.GetRequestById(1)
+
+	assert.NotNil(t, dbErr)
+}
+
 func TestMeetRequestDAO_GetRequests_Success(t *testing.T) {
 	var db, mock, err = sqlmock.New()
 

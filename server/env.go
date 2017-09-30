@@ -15,5 +15,5 @@ type Env struct {
 	conf             config.Conf
 	hashFunc         func(password []byte) ([]byte, error)
 	hashValidator    func(password []byte, hash []byte) error
-	meetRequestCache cache.Cache
+	meetRequestCache *cache.Cache
 }

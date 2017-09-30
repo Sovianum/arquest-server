@@ -7,10 +7,14 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/Sovianum/acquaintanceServer/common"
+	"strconv"
+	"github.com/patrickmn/go-cache"
+	"fmt"
 )
 
 const (
 	requestNotFound = "request not found"
+	alreadyAccepted = "user has already accepted another request"
 )
 
 func (env *Env) CreateRequest(w http.ResponseWriter, r *http.Request) {
@@ -80,24 +84,87 @@ func (env *Env) UpdateRequest(w http.ResponseWriter, r *http.Request) {
 		w.Write(common.GetErrorJson(tokenErr))
 	}
 
+	switch update.Status {
+	case model.StatusAccepted:
+		var code, err = env.handleRequestAccept(update.Id, userId)
+		if err != nil {
+			w.WriteHeader(code)
+			w.Write(common.GetErrorJson(err))
+			return
+		}
+	case model.StatusDeclined:
+		var code, err = env.handleRequestDecline(update.Id, userId)
+		if err != nil {
+			w.WriteHeader(code)
+			w.Write(common.GetErrorJson(err))
+			return
+		}
+	}
+
 	var rowsAffected, dbErr = env.meetRequestDAO.UpdateRequest(update.Id, userId, update.Status)
 	if dbErr != nil {
+		env.revertCache(update.Id, userId)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(common.GetErrorJson(dbErr))
 	}
 
 	if rowsAffected == 0 {
+		env.revertCache(update.Id, userId)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write(common.GetErrorJson(errors.New(requestNotFound)))
 	}
 }
 
-func (env *Env) handleRequestAccept(update *model.MeetRequestUpdate) error {
-	return nil	// TODO implement accept-specific logic
+func (env *Env) revertCache(requestId int, userId int) {
+	var connect, found = env.meetRequestCache.Get(strconv.Itoa(userId))
+	if !found {
+		return
+	}
+
+	connect.(MeetConnection).Remove(requestId, userId)
 }
 
-func (env *Env) handleRequestDecline(update *model.MeetRequestUpdate) error {
-	return nil // TODO implement decline-specific logic
+func (env *Env) handleRequestAccept(requestId int, userId int) (int, error) {
+	var f = func(connection MeetConnection, request *model.MeetRequest) (int, error) {
+		if err := connection.AddAccept(request); err != nil {
+			return http.StatusUnavailableForLegalReasons, errors.New(alreadyAccepted)
+		}
+		return http.StatusOK, nil
+	}
+
+	return env.handleRequestUpdate(f, requestId, userId)
+}
+
+func (env *Env) handleRequestDecline(requestId int, userId int) (int, error) {
+	var f = func(connection MeetConnection, request *model.MeetRequest) (int, error) {
+		connection.AddDecline(request)
+		return http.StatusOK, nil
+	}
+	return env.handleRequestUpdate(f, requestId, userId)
+}
+
+func (env *Env) handleRequestUpdate(f func(MeetConnection, *model.MeetRequest) (int, error), requestId int, userId int) (int, error) {
+	var request, requestErr = env.meetRequestDAO.GetRequestById(requestId)
+	if requestErr != nil || request.Status != model.StatusPending {
+		return http.StatusNotFound, requestErr
+	}
+
+	if request.RequestedId != userId {
+		return http.StatusNotFound, errors.New(requestNotFound)
+	}
+
+	var connect, found = env.meetRequestCache.Get(strconv.Itoa(request.RequestedId))
+	if !found {
+		connect = NewMeetConnection()
+		env.meetRequestCache.Set(strconv.Itoa(request.RequestedId), connect, cache.DefaultExpiration)
+	}
+
+	var casted, ok = connect.(MeetConnection)
+	if !ok {
+		return http.StatusInternalServerError, fmt.Errorf("failed to cast connect. Type: %T", connect)
+	}
+
+	return f(casted, request)
 }
 
 func parseRequestUpdate(r *http.Request) (*model.MeetRequestUpdate, int, error) {

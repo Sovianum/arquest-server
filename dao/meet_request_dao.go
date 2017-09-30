@@ -37,11 +37,15 @@ const (
 	updateRequestStatus = `
 		UPDATE MeetRequest SET status = $1 WHERE id = $2 AND requestedId = $3
 	`
+	getRequestById = `
+		SELECT id, requesterId, requestedId, status, time FROM MeetRequest WHERE id = $1
+	`
 )
 
 type MeetRequestDAO interface {
 	CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error)
 	GetRequests(requestedId int) ([]*model.MeetRequest, error)
+	GetRequestById(id int) (*model.MeetRequest, error)
 	UpdateRequest(id int, requestedId int, status string) (int, error)
 }
 
@@ -53,6 +57,15 @@ func NewMeetDAO(db *sql.DB) MeetRequestDAO {
 	return &meetRequestDAO{
 		db: db,
 	}
+}
+
+func (dao *meetRequestDAO) GetRequestById(id int) (*model.MeetRequest, error) {
+	var r = new(model.MeetRequest)
+	var err = dao.db.QueryRow(getRequestById, id).Scan(&r.Id, &r.RequesterId, &r.RequestedId, &r.Status, &r.Time)
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
 }
 
 func (dao *meetRequestDAO) GetRequests(requestedId int) ([]*model.MeetRequest, error) {
