@@ -20,13 +20,6 @@ const (
 	onlineTimeout = 5
 )
 
-//getNeighbourUsers = `SELECT u2.id, u2.login, u2.age, u2.sex, u2.about
-//						 FROM Users u1
-//						 	JOIN Users u2 ON u2.id != u1.id
-//						 	JOIN Position p1 ON u1.id = p1.id
-//						 	JOIN Position p2 ON u2.id = p2.id
-//						 WHERE u1.id = $1 AND ST_DistanceSphere(p1.geom, p2.geom) <= $2 AND age(current_timestamp, p2.time) < '$3 minutes'`
-
 func TestEnv_UserGetNeighboursGet_Success(t *testing.T) {
 	var db, mock, dbErr = sqlmock.New()
 
@@ -60,7 +53,12 @@ func TestEnv_UserGetNeighboursGet_Success(t *testing.T) {
 
 	assert.Nil(t, recErr)
 	assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	fmt.Println(rec.Body.String())
+
+	var gotNeighbourPositions = make([]*model.User, 0)
+	var jsonErr = json.Unmarshal(rec.Body.Bytes(), &gotNeighbourPositions)
+
+	assert.Nil(t, jsonErr)
+	assert.Equal(t, 2, len(gotNeighbourPositions))
 }
 
 func TestEnv_UserGetNeighboursGet_BadToken(t *testing.T) {
