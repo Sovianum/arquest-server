@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TestPosition_ReadJsonIn_ParseError(t *testing.T) {
+func TestPosition_Unmarshal_ParseError(t *testing.T) {
 	var user = &Position{}
 	var data = []byte("{")
 	var err = json.Unmarshal(data, user)
