@@ -237,31 +237,25 @@ func TestEnv_GetRequests_Error(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 }
 
-func TestEnv_AcceptRequest_Success(t *testing.T) {
+func TestEnv_UpdateRequest_Success(t *testing.T) {
 	var env = &Env{conf:getTotalConf(), meetRequestDAO:&mocks.MeetRequestDAOMockSuccess{}}
 	var tokenStr, _ = env.generateTokenString(1, "login")
+
+	var update = model.MeetRequestUpdate{Id:1, Status:model.StatusAccepted}
+	var requestMsg, err = json.Marshal(update)
+	assert.Nil(t, err)
 
 	var rec, recErr = getRecorder(
 		urlSample,
 		http.MethodPost,
-		env.GetRequests,
-		strings.NewReader(""),
+		env.UpdateRequest,
+		strings.NewReader(string(requestMsg)),
 		headerPair{"Content-Type", "application/json"},
 		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
 	)
 
 	assert.Nil(t, recErr)
 	assert.Equal(t, http.StatusOK, rec.Code)
-
-	var requests, _ = env.meetRequestDAO.GetRequests(1)
-	var gotRequests = make([]*model.MeetRequest, 0)
-	var jsonErr = json.Unmarshal(rec.Body.Bytes(), &gotRequests)
-
-	assert.Nil(t, jsonErr)
-	assert.Equal(t, len(requests), len(gotRequests))
-	for i := range requests {
-		assert.Equal(t, *requests[i], *gotRequests[i])
-	}
 }
 
 func getIncompleteToken(env *Env) (string, error) {

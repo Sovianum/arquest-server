@@ -13,7 +13,7 @@ const (
 
 type createRequestFuncType func(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (int, error)
 type getRequestsFuncType func(requestedId int) ([]*model.MeetRequest, error)
-type updateRequestFuncType func(id int, requestedId int) (int, error)
+type updateRequestFuncType func(id int, requestedId int, status string) (int, error)
 
 var createRequestSuccess createRequestFuncType = func(int, int, int, float64) (int, error) {
 	return 1, nil
@@ -38,23 +38,13 @@ var getRequestsError getRequestsFuncType = func(int) ([]*model.MeetRequest, erro
 	return nil, errors.New(getError)
 }
 
-var acceptRequestSuccess updateRequestFuncType = func(int, int) (int, error) {
+var updateRequestSuccess updateRequestFuncType = func(int, int, string) (int, error) {
 	return 1, nil
 }
-var acceptRequestNoRequest updateRequestFuncType = func(int, int) (int, error) {
+var updateRequestNoRequest updateRequestFuncType = func(int, int, string) (int, error) {
 	return 0, nil
 }
-var acceptRequestError updateRequestFuncType = func(int, int) (int, error) {
-	return 0, errors.New(acceptError)
-}
-
-var declineRequestSuccess updateRequestFuncType = func(int, int) (int, error) {
-	return 1, nil
-}
-var declineRequestNoRequest updateRequestFuncType = func(int, int) (int, error) {
-	return 0, nil
-}
-var declineRequestError updateRequestFuncType = func(int, int) (int, error) {
+var updateRequestError updateRequestFuncType = func(int, int, string) (int, error) {
 	return 0, errors.New(acceptError)
 }
 
@@ -68,12 +58,8 @@ func (*MeetRequestDAOMockSuccess) GetRequests(requestedId int) ([]*model.MeetReq
 	return getRequestsSuccess(requestedId)
 }
 
-func (*MeetRequestDAOMockSuccess) AcceptRequest(id int, requestedId int) (int, error) {
-	return acceptRequestSuccess(id, requestedId)
-}
-
-func (*MeetRequestDAOMockSuccess) DeclineRequest(id int, requestedId int) (int, error) {
-	return declineRequestSuccess(id, requestedId)
+func (*MeetRequestDAOMockSuccess) UpdateRequest(id int, requestedId int, status string) (int, error) {
+	return updateRequestSuccess(id, requestedId, status)
 }
 
 type MeetRequestDAOMockCreateConflict struct{}
@@ -86,12 +72,8 @@ func (*MeetRequestDAOMockCreateConflict) GetRequests(requestedId int) ([]*model.
 	return getRequestsSuccess(requestedId)
 }
 
-func (*MeetRequestDAOMockCreateConflict) AcceptRequest(id int, requestedId int) (int, error) {
-	return acceptRequestSuccess(id, requestedId)
-}
-
-func (*MeetRequestDAOMockCreateConflict) DeclineRequest(id int, requestedId int) (int, error) {
-	return declineRequestSuccess(id, requestedId)
+func (*MeetRequestDAOMockCreateConflict) UpdateRequest(id int, requestedId int, status string) (int, error) {
+	return updateRequestSuccess(id, requestedId, status)
 }
 
 type MeetRequestDAOMockCreateError struct{}
@@ -104,12 +86,8 @@ func (*MeetRequestDAOMockCreateError) GetRequests(requestedId int) ([]*model.Mee
 	return getRequestsSuccess(requestedId)
 }
 
-func (*MeetRequestDAOMockCreateError) AcceptRequest(id int, requestedId int) (int, error) {
-	return acceptRequestSuccess(id, requestedId)
-}
-
-func (*MeetRequestDAOMockCreateError) DeclineRequest(id int, requestedId int) (int, error) {
-	return declineRequestSuccess(id, requestedId)
+func (*MeetRequestDAOMockCreateError) UpdateRequest(id int, requestedId int, status string) (int, error) {
+	return updateRequestSuccess(id, requestedId, status)
 }
 
 type MeetRequestDAOMockGetRequestsEmpty struct{}
@@ -122,12 +100,8 @@ func (*MeetRequestDAOMockGetRequestsEmpty) GetRequests(requestedId int) ([]*mode
 	return getRequestsEmpty(requestedId)
 }
 
-func (*MeetRequestDAOMockGetRequestsEmpty) AcceptRequest(id int, requestedId int) (int, error) {
-	return acceptRequestSuccess(id, requestedId)
-}
-
-func (*MeetRequestDAOMockGetRequestsEmpty) DeclineRequest(id int, requestedId int) (int, error) {
-	return declineRequestSuccess(id, requestedId)
+func (*MeetRequestDAOMockGetRequestsEmpty) UpdateRequest(id int, requestedId int, status string) (int, error) {
+	return updateRequestSuccess(id, requestedId, status)
 }
 
 type MeetRequestDAOMockGetRequestsError struct{}
@@ -140,82 +114,34 @@ func (*MeetRequestDAOMockGetRequestsError) GetRequests(requestedId int) ([]*mode
 	return getRequestsError(requestedId)
 }
 
-func (*MeetRequestDAOMockGetRequestsError) AcceptRequest(id int, requestedId int) (int, error) {
-	return acceptRequestSuccess(id, requestedId)
+func (*MeetRequestDAOMockGetRequestsError) UpdateRequest(id int, requestedId int, status string) (int, error) {
+	return updateRequestSuccess(id, requestedId, status)
 }
 
-func (*MeetRequestDAOMockGetRequestsError) DeclineRequest(id int, requestedId int) (int, error) {
-	return declineRequestSuccess(id, requestedId)
-}
+type MeetRequestDAOMockUpdateNoRequest struct{}
 
-type MeetRequestDAOMockAcceptNoRequest struct{}
-
-func (*MeetRequestDAOMockAcceptNoRequest) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error) {
+func (*MeetRequestDAOMockUpdateNoRequest) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error) {
 	return createRequestSuccess(requesterId, requestedId, requestTimeoutMin, maxDistance)
 }
 
-func (*MeetRequestDAOMockAcceptNoRequest) GetRequests(requestedId int) ([]*model.MeetRequest, error) {
+func (*MeetRequestDAOMockUpdateNoRequest) GetRequests(requestedId int) ([]*model.MeetRequest, error) {
 	return getRequestsSuccess(requestedId)
 }
 
-func (*MeetRequestDAOMockAcceptNoRequest) AcceptRequest(id int, requestedId int) (int, error) {
-	return acceptRequestNoRequest(id, requestedId)
+func (*MeetRequestDAOMockUpdateNoRequest) UpdateRequest(id int, requestedId int, status string) (int, error) {
+	return updateRequestNoRequest(id, requestedId, status)
 }
 
-func (*MeetRequestDAOMockAcceptNoRequest) DeclineRequest(id int, requestedId int) (int, error) {
-	return declineRequestSuccess(id, requestedId)
-}
+type MeetRequestDAOMockUpdateError struct{}
 
-type MeetRequestDAOMockAcceptError struct{}
-
-func (*MeetRequestDAOMockAcceptError) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error) {
+func (*MeetRequestDAOMockUpdateError) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error) {
 	return createRequestSuccess(requesterId, requestedId, requestTimeoutMin, maxDistance)
 }
 
-func (*MeetRequestDAOMockAcceptError) GetRequests(requestedId int) ([]*model.MeetRequest, error) {
+func (*MeetRequestDAOMockUpdateError) GetRequests(requestedId int) ([]*model.MeetRequest, error) {
 	return getRequestsSuccess(requestedId)
 }
 
-func (*MeetRequestDAOMockAcceptError) AcceptRequest(id int, requestedId int) (int, error) {
-	return acceptRequestError(id, requestedId)
-}
-
-func (*MeetRequestDAOMockAcceptError) DeclineRequest(id int, requestedId int) (int, error) {
-	return declineRequestSuccess(id, requestedId)
-}
-
-type MeetRequestDAOMockDeclineNoRequest struct{}
-
-func (*MeetRequestDAOMockDeclineNoRequest) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error) {
-	return createRequestSuccess(requesterId, requestedId, requestTimeoutMin, maxDistance)
-}
-
-func (*MeetRequestDAOMockDeclineNoRequest) GetRequests(requestedId int) ([]*model.MeetRequest, error) {
-	return getRequestsSuccess(requestedId)
-}
-
-func (*MeetRequestDAOMockDeclineNoRequest) AcceptRequest(id int, requestedId int) (int, error) {
-	return acceptRequestSuccess(id, requestedId)
-}
-
-func (*MeetRequestDAOMockDeclineNoRequest) DeclineRequest(id int, requestedId int) (int, error) {
-	return declineRequestNoRequest(id, requestedId)
-}
-
-type MeetRequestDAOMockDeclineError struct{}
-
-func (*MeetRequestDAOMockDeclineError) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error) {
-	return createRequestSuccess(requesterId, requestedId, requestTimeoutMin, maxDistance)
-}
-
-func (*MeetRequestDAOMockDeclineError) GetRequests(requestedId int) ([]*model.MeetRequest, error) {
-	return getRequestsSuccess(requestedId)
-}
-
-func (*MeetRequestDAOMockDeclineError) AcceptRequest(id int, requestedId int) (int, error) {
-	return acceptRequestSuccess(id, requestedId)
-}
-
-func (*MeetRequestDAOMockDeclineError) DeclineRequest(id int, requestedId int) (int, error) {
-	return declineRequestError(id, requestedId)
+func (*MeetRequestDAOMockUpdateError) UpdateRequest(id int, requestedId int, status string) (int, error) {
+	return updateRequestError(id, requestedId, status)
 }

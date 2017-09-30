@@ -42,8 +42,7 @@ const (
 type MeetRequestDAO interface {
 	CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error)
 	GetRequests(requestedId int) ([]*model.MeetRequest, error)
-	AcceptRequest(id int, requestedId int) (int, error)
-	DeclineRequest(id int, requestedId int) (int, error)
+	UpdateRequest(id int, requestedId int, status string) (int, error)
 }
 
 type meetRequestDAO struct {
@@ -54,14 +53,6 @@ func NewMeetDAO(db *sql.DB) MeetRequestDAO {
 	return &meetRequestDAO{
 		db: db,
 	}
-}
-
-func (dao *meetRequestDAO) DeclineRequest(id int, requestedId int) (int, error) {
-	return dao.updateRequestStatus(id, requestedId, model.StatusDeclined)
-}
-
-func (dao *meetRequestDAO) AcceptRequest(id int, requestedId int) (int, error) {
-	return dao.updateRequestStatus(id, requestedId, model.StatusAccepted)
 }
 
 func (dao *meetRequestDAO) GetRequests(requestedId int) ([]*model.MeetRequest, error) {
@@ -96,7 +87,7 @@ func (dao *meetRequestDAO) CreateRequest(requesterId int, requestedId int, reque
 	return int(rowsAffected), rowsErr
 }
 
-func (dao *meetRequestDAO) updateRequestStatus(id int, requestedId int, status string) (int, error) {
+func (dao *meetRequestDAO) UpdateRequest(id int, requestedId int, status string) (int, error) {
 	var result, err = dao.db.Exec(updateRequestStatus, status, id, requestedId)
 	if err != nil {
 		return 0, err

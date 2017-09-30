@@ -271,25 +271,29 @@ func TestMeetRequestDAO_CreateRequest(t *testing.T) {
 	}
 }
 
-func TestMeetRequestDAO_AcceptRequest(t *testing.T) {
+func TestMeetRequestDAO_UpdateRequest(t *testing.T) {
 	var cases = []struct{
 		requestId int
+		status string
 		errIsNil bool
 		errMsg string
 		rowsAffected int64
 	}{
 		{
 			requestId: 1,
+			status: model.StatusAccepted,
 			errIsNil: true,
 			rowsAffected: 1,
 		},
 		{
 			requestId: 1,
+			status: model.StatusAccepted,
 			errIsNil: true,
 			rowsAffected: 0,
 		},
 		{
 			requestId: 1,
+			status: model.StatusAccepted,
 			errIsNil: false,
 			errMsg: "err",
 		},
@@ -315,7 +319,7 @@ func TestMeetRequestDAO_AcceptRequest(t *testing.T) {
 		}
 
 		var meetRequestDAO = NewMeetDAO(db)
-		var rowsAffected, dbErr = meetRequestDAO.AcceptRequest(testCase.requestId, 100)
+		var rowsAffected, dbErr = meetRequestDAO.UpdateRequest(testCase.requestId, 100, testCase.status)
 
 		if !testCase.errIsNil {
 			assert.NotNil(t, dbErr, strconv.Itoa(i))
@@ -329,60 +333,3 @@ func TestMeetRequestDAO_AcceptRequest(t *testing.T) {
 	}
 }
 
-func TestMeetRequestDAO_DeclineRequest(t *testing.T) {
-	var cases = []struct{
-		requestId int
-		errIsNil bool
-		errMsg string
-		rowsAffected int64
-	}{
-		{
-			requestId: 1,
-			errIsNil: true,
-			rowsAffected: 1,
-		},
-		{
-			requestId: 1,
-			errIsNil: true,
-			rowsAffected: 0,
-		},
-		{
-			requestId: 1,
-			errIsNil: false,
-			errMsg: "err",
-		},
-	}
-
-	for i, testCase := range cases {
-		var db, mock, err = sqlmock.New()
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if testCase.errIsNil {
-			mock.
-			ExpectExec("UPDATE").
-				WithArgs(model.StatusDeclined, testCase.requestId, 100).
-				WillReturnResult(sqlmock.NewResult(1, testCase.rowsAffected))
-		} else {
-			mock.
-			ExpectExec("UPDATE").
-				WithArgs(model.StatusDeclined, testCase.requestId, 100).
-				WillReturnError(errors.New(testCase.errMsg))
-		}
-
-		var meetRequestDAO = NewMeetDAO(db)
-		var rowsAffected, dbErr = meetRequestDAO.DeclineRequest(testCase.requestId, 100)
-
-		if !testCase.errIsNil {
-			assert.NotNil(t, dbErr, strconv.Itoa(i))
-			assert.Equal(t, testCase.errMsg, dbErr.Error(), strconv.Itoa(i))
-		} else {
-			assert.Nil(t, dbErr, strconv.Itoa(i))
-			assert.Equal(t, int(testCase.rowsAffected), rowsAffected, strconv.Itoa(i))
-		}
-
-		db.Close()
-	}
-}
