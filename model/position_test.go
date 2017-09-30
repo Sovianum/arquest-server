@@ -14,15 +14,6 @@ func TestPosition_ReadJsonIn_ParseError(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestPosition_ReadJsonIn_IncompleteData(t *testing.T) {
-	var user = User{}
-	var data = []byte("{\"login\": \"login\"}")
-	var err = json.Unmarshal(data, &user)
-
-	assert.NotNil(t, err)
-	assert.Equal(t, UserRequiredPassword, err.Error())
-}
-
 func TestPosition_Unmarshal_Success(t *testing.T) {
 	var pos = Position{}
 	var data = []byte("{\"user_id\": 100, \"time\": \"2006-01-02T15:04:05\", \"point\": {\"x\": 100, \"y\": 200}}")

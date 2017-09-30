@@ -6,7 +6,7 @@ import (
 
 const (
 	PositionRequiredUserId = "\"user_id\" field required"
-	PositionRequiredPoint  = "\"password\" field required"
+	PositionRequiredPoint  = "\"position\" field required"
 	PositionRequireTime    = "\"time\" field required"
 )
 
