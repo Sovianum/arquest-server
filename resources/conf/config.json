@@ -8,7 +8,7 @@
     "driver_name": "postgres",
     "user": "go_user",
     "password": "go",
-    "db_name": "test1",
+    "db_name": "acq",
     "auth_string_template": "user=%s password=%s dbname=%s sslmode=disable"
   },
   "logic": {
