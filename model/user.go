@@ -28,8 +28,8 @@ type User struct {
 func (user *User) UnmarshalJSON(data []byte) error {
 	var err = checkPresence(
 		data,
-		[]string{"login", "password"},
-		[]string{UserRequiredLogin, UserRequiredPassword},
+		[]string{"login"},
+		[]string{UserRequiredLogin},
 	)
 	if err != nil {
 		return err

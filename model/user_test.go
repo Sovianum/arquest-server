@@ -13,15 +13,6 @@ func TestUser_Unmarshal_ParseError(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestUser_Unmarshal_IncompleteData(t *testing.T) {
-	var user = User{}
-	var data = []byte("{\"login\": \"login\"}")
-	var err = json.Unmarshal(data, &user)
-
-	assert.NotNil(t, err)
-	assert.Equal(t, UserRequiredPassword, err.Error())
-}
-
 func TestUser_Unmarshal_InvalidUser(t *testing.T) {
 	var user = &User{}
 	var data = []byte("{\"login\": \"login\", \"password\": \"pass\", \"sex\": \"p\"}")
