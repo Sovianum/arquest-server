@@ -35,15 +35,15 @@ const (
 		INSERT INTO MeetRequest (requesterId, requestedId) SELECT $1, $2
 	`
 	updateRequestStatus = `
-		UPDATE MeetRequest SET Status = $1 WHERE id = $2
+		UPDATE MeetRequest SET status = $1 WHERE id = $2 AND requestedId = $3
 	`
 )
 
 type MeetRequestDAO interface {
 	CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error)
 	GetRequests(requestedId int) ([]*model.MeetRequest, error)
-	AcceptRequest(id int) (int, error)
-	DeclineRequest(id int) (int, error)
+	AcceptRequest(id int, requestedId int) (int, error)
+	DeclineRequest(id int, requestedId int) (int, error)
 }
 
 type meetRequestDAO struct {
@@ -56,12 +56,12 @@ func NewMeetDAO(db *sql.DB) MeetRequestDAO {
 	}
 }
 
-func (dao *meetRequestDAO) DeclineRequest(id int) (int, error) {
-	return dao.updateRequestStatus(id, model.STATUS_DECLINED)
+func (dao *meetRequestDAO) DeclineRequest(id int, requestedId int) (int, error) {
+	return dao.updateRequestStatus(id, requestedId, model.StatusDeclined)
 }
 
-func (dao *meetRequestDAO) AcceptRequest(id int) (int, error) {
-	return dao.updateRequestStatus(id, model.STATUS_ACCEPTED)
+func (dao *meetRequestDAO) AcceptRequest(id int, requestedId int) (int, error) {
+	return dao.updateRequestStatus(id, requestedId, model.StatusAccepted)
 }
 
 func (dao *meetRequestDAO) GetRequests(requestedId int) ([]*model.MeetRequest, error) {
@@ -96,8 +96,8 @@ func (dao *meetRequestDAO) CreateRequest(requesterId int, requestedId int, reque
 	return int(rowsAffected), rowsErr
 }
 
-func (dao *meetRequestDAO) updateRequestStatus(id int, status string) (int, error) {
-	var result, err = dao.db.Exec(updateRequestStatus, status, id)
+func (dao *meetRequestDAO) updateRequestStatus(id int, requestedId int, status string) (int, error) {
+	var result, err = dao.db.Exec(updateRequestStatus, status, id, requestedId)
 	if err != nil {
 		return 0, err
 	}

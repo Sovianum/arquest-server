@@ -26,7 +26,7 @@ func TestMeetRequestDAO_GetRequests_Success(t *testing.T) {
 		WithArgs(1).
 		WillReturnRows(
 			sqlmock.NewRows([]string{"id", "requesterId", "requestedId", "status", "time"}).
-				AddRow(1, 2, 3, model.STATUS_PENDING, date),
+				AddRow(1, 2, 3, model.StatusPending, date),
 		)
 
 	var request = &model.MeetRequest{
@@ -34,7 +34,7 @@ func TestMeetRequestDAO_GetRequests_Success(t *testing.T) {
 		RequesterId: 2,
 		RequestedId: 3,
 		Time:        model.QuotedTime(date),
-		Status:      model.STATUS_PENDING,
+		Status:      model.StatusPending,
 	}
 
 	var meetRequestDAO = NewMeetDAO(db)
@@ -305,17 +305,17 @@ func TestMeetRequestDAO_AcceptRequest(t *testing.T) {
 		if testCase.errIsNil {
 			mock.
 			ExpectExec("UPDATE").
-				WithArgs(model.STATUS_ACCEPTED, testCase.requestId).
+				WithArgs(model.StatusAccepted, testCase.requestId, 100).
 				WillReturnResult(sqlmock.NewResult(1, testCase.rowsAffected))
 		} else {
 			mock.
 			ExpectExec("UPDATE").
-				WithArgs(model.STATUS_ACCEPTED, testCase.requestId).
+				WithArgs(model.StatusAccepted, testCase.requestId, 100).
 				WillReturnError(errors.New(testCase.errMsg))
 		}
 
 		var meetRequestDAO = NewMeetDAO(db)
-		var rowsAffected, dbErr = meetRequestDAO.AcceptRequest(testCase.requestId)
+		var rowsAffected, dbErr = meetRequestDAO.AcceptRequest(testCase.requestId, 100)
 
 		if !testCase.errIsNil {
 			assert.NotNil(t, dbErr, strconv.Itoa(i))
@@ -363,17 +363,17 @@ func TestMeetRequestDAO_DeclineRequest(t *testing.T) {
 		if testCase.errIsNil {
 			mock.
 			ExpectExec("UPDATE").
-				WithArgs(model.STATUS_DECLINED, testCase.requestId).
+				WithArgs(model.StatusDeclined, testCase.requestId, 100).
 				WillReturnResult(sqlmock.NewResult(1, testCase.rowsAffected))
 		} else {
 			mock.
 			ExpectExec("UPDATE").
-				WithArgs(model.STATUS_DECLINED, testCase.requestId).
+				WithArgs(model.StatusDeclined, testCase.requestId, 100).
 				WillReturnError(errors.New(testCase.errMsg))
 		}
 
 		var meetRequestDAO = NewMeetDAO(db)
-		var rowsAffected, dbErr = meetRequestDAO.DeclineRequest(testCase.requestId)
+		var rowsAffected, dbErr = meetRequestDAO.DeclineRequest(testCase.requestId, 100)
 
 		if !testCase.errIsNil {
 			assert.NotNil(t, dbErr, strconv.Itoa(i))
