@@ -2,7 +2,7 @@ package dao
 
 import (
 	"database/sql/driver"
-	"github.com/Sovianum/acquaintanceServer/model"
+	"github.com/Sovianum/acquaintance-server/model"
 	"github.com/go-errors/errors"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"

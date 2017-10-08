@@ -2,7 +2,7 @@ package server
 
 import (
 	"testing"
-	"github.com/Sovianum/acquaintanceServer/model"
+	"github.com/Sovianum/acquaintance-server/model"
 	"github.com/stretchr/testify/assert"
 )
 

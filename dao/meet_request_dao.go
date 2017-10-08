@@ -1,7 +1,7 @@
 package dao
 
 import (
-	"github.com/Sovianum/acquaintanceServer/model"
+	"github.com/Sovianum/acquaintance-server/model"
 	"database/sql"
 )
 

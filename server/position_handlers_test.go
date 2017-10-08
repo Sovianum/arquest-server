@@ -3,9 +3,9 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Sovianum/acquaintanceServer/config"
-	"github.com/Sovianum/acquaintanceServer/dao"
-	"github.com/Sovianum/acquaintanceServer/model"
+	"github.com/Sovianum/acquaintance-server/config"
+	"github.com/Sovianum/acquaintance-server/dao"
+	"github.com/Sovianum/acquaintance-server/model"
 	"github.com/go-errors/errors"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"

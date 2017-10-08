@@ -3,14 +3,14 @@ package server
 import (
 	"net/http"
 	"io/ioutil"
-	"github.com/Sovianum/acquaintanceServer/model"
+	"github.com/Sovianum/acquaintance-server/model"
 	"encoding/json"
 	"errors"
-	"github.com/Sovianum/acquaintanceServer/common"
+	"github.com/Sovianum/acquaintance-server/common"
 	"strconv"
 	"github.com/patrickmn/go-cache"
 	"fmt"
-	"github.com/Sovianum/acquaintanceServer/dao"
+	"github.com/Sovianum/acquaintance-server/dao"
 )
 
 const (

@@ -2,9 +2,9 @@ package mocks
 
 import (
 	"errors"
-	"github.com/Sovianum/acquaintanceServer/model"
+	"github.com/Sovianum/acquaintance-server/model"
 	"time"
-	"github.com/Sovianum/acquaintanceServer/dao"
+	"github.com/Sovianum/acquaintance-server/dao"
 )
 
 const (

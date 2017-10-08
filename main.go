@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	_ "github.com/lib/pq"
 	"os"
-	"github.com/Sovianum/acquaintanceServer/config"
-	"github.com/Sovianum/acquaintanceServer/server"
+	"github.com/Sovianum/acquaintance-server/config"
+	"github.com/Sovianum/acquaintance-server/server"
 	"net/http"
 	"github.com/gorilla/handlers"
 )

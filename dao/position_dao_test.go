@@ -5,7 +5,7 @@ import (
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
 	"github.com/stretchr/testify/assert"
 	"errors"
-	"github.com/Sovianum/acquaintanceServer/model"
+	"github.com/Sovianum/acquaintance-server/model"
 	"time"
 )
 

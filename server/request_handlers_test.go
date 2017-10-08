@@ -3,9 +3,9 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Sovianum/acquaintanceServer/config"
-	"github.com/Sovianum/acquaintanceServer/model"
-	"github.com/Sovianum/acquaintanceServer/server/mocks"
+	"github.com/Sovianum/acquaintance-server/config"
+	"github.com/Sovianum/acquaintance-server/model"
+	"github.com/Sovianum/acquaintance-server/server/mocks"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"

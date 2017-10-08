@@ -4,7 +4,7 @@ import (
 	"errors"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
 	"testing"
-	"github.com/Sovianum/acquaintanceServer/model"
+	"github.com/Sovianum/acquaintance-server/model"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 )

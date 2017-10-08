@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/Sovianum/acquaintanceServer/model"
+	"github.com/Sovianum/acquaintance-server/model"
 	"github.com/go-errors/errors"
 	"sync"
 	"time"

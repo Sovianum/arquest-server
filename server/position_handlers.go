@@ -3,13 +3,13 @@ package server
 import (
 	"net/http"
 	"io/ioutil"
-	"github.com/Sovianum/acquaintanceServer/model"
+	"github.com/Sovianum/acquaintance-server/model"
 	"encoding/json"
 	"strings"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"errors"
-	"github.com/Sovianum/acquaintanceServer/common"
+	"github.com/Sovianum/acquaintance-server/common"
 )
 
 const (

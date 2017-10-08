@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/Sovianum/acquaintanceServer/config"
-	"github.com/Sovianum/acquaintanceServer/dao"
+	"github.com/Sovianum/acquaintance-server/config"
+	"github.com/Sovianum/acquaintance-server/dao"
 	"github.com/patrickmn/go-cache"
 	"database/sql"
 	"time"
