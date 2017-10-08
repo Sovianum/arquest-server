@@ -94,8 +94,21 @@ func (env *Env) UpdateRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// here cache is is used before accessing database
-	// cos when checking incoming requests, only pending requests are taken into account
+	var rowsAffected, dbErr = env.meetRequestDAO.UpdateRequest(update.Id, userId, update.Status)
+	if dbErr != nil {
+		env.revertCache(update.Id, userId)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(common.GetErrorJson(dbErr))
+		return
+	}
+
+	if rowsAffected == 0 {
+		env.revertCache(update.Id, userId)
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(common.GetErrorJson(errors.New(requestNotFound)))
+		return
+	}
+
 	switch update.Status {
 	case model.StatusAccepted:
 		var code, err = env.handleRequestAccept(update.Id, userId)
@@ -111,21 +124,6 @@ func (env *Env) UpdateRequest(w http.ResponseWriter, r *http.Request) {
 			w.Write(common.GetErrorJson(err))
 			return
 		}
-	}
-
-	var rowsAffected, dbErr = env.meetRequestDAO.UpdateRequest(update.Id, userId, update.Status)
-	if dbErr != nil {
-		env.revertCache(update.Id, userId)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(common.GetErrorJson(dbErr))
-		return
-	}
-
-	if rowsAffected == 0 {
-		env.revertCache(update.Id, userId)
-		w.WriteHeader(http.StatusNotFound)
-		w.Write(common.GetErrorJson(errors.New(requestNotFound)))
-		return
 	}
 
 	w.Write(common.GetEmptyJson())
@@ -147,14 +145,8 @@ func (env *Env) GetNewRequests(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var newRequestData = box.GetAll(env.conf.Logic.PollSeconds)
-	var msg, jsonErr = json.Marshal(newRequestData)
 
-	if jsonErr != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(common.GetErrorJson(jsonErr))
-		return
-	}
-	w.Write(msg)
+	w.Write(common.GetDataJson(newRequestData))
 }
 
 func (env *Env) revertCache(requestId int, userId int) {
@@ -174,7 +166,10 @@ func (env *Env) handleRequestAccept(requestId int, userId int) (int, error) {
 		return http.StatusOK, nil
 	}
 	var rightsCheckFunc = func(request *model.MeetRequest, userId int) bool {return request.RequestedId == userId}
-	return env.dispatchRequest(boxFunc, rightsCheckFunc, requestId, userId)
+	var boxExtractFunc = func(request *model.MeetRequest) (MailBox, error) {
+		return env.getMailBox(request.RequesterId)
+	}
+	return env.dispatchRequest(boxFunc, boxExtractFunc, rightsCheckFunc, requestId, userId)
 }
 
 func (env *Env) handleRequestDecline(requestId int, userId int) (int, error) {
@@ -183,7 +178,10 @@ func (env *Env) handleRequestDecline(requestId int, userId int) (int, error) {
 		return http.StatusOK, nil
 	}
 	var rightsCheckFunc = func(request *model.MeetRequest, userId int) bool {return request.RequestedId == userId}
-	return env.dispatchRequest(boxFunc, rightsCheckFunc, requestId, userId)
+	var boxExtractFunc = func(request *model.MeetRequest) (MailBox, error) {
+		return env.getMailBox(request.RequesterId)
+	}
+	return env.dispatchRequest(boxFunc, boxExtractFunc, rightsCheckFunc, requestId, userId)
 }
 
 func (env *Env) handleRequestPending(requestId int, userId int) (int, error) {
@@ -194,16 +192,20 @@ func (env *Env) handleRequestPending(requestId int, userId int) (int, error) {
 	var rightsCheckFunc = func(request *model.MeetRequest, userId int) bool {
 		return request.RequesterId == userId
 	}
-	return env.dispatchRequest(boxFunc, rightsCheckFunc, requestId, userId)
+	var boxExtractFunc = func(request *model.MeetRequest) (MailBox, error) {
+		return env.getMailBox(request.RequestedId)
+	}
+	return env.dispatchRequest(boxFunc, boxExtractFunc, rightsCheckFunc, requestId, userId)
 }
 
 func (env *Env) dispatchRequest(
 	boxFunc func(MailBox, *model.MeetRequest) (int, error),
+	boxExtractFunc func(request *model.MeetRequest) (MailBox, error),
 	rightsCheckFunc func(request *model.MeetRequest, userId int) bool,
 	requestId int,
 	userId int,
 ) (int, error) {
-	var request, requestErr = env.meetRequestDAO.GetPendingRequestById(requestId)
+	var request, requestErr = env.meetRequestDAO.GetRequestById(requestId)
 	if requestErr != nil {
 		return http.StatusNotFound, requestErr
 	}
@@ -212,7 +214,7 @@ func (env *Env) dispatchRequest(
 		return http.StatusNotFound, errors.New(requestNotFound)
 	}
 
-	var box, boxErr = env.getMailBox(userId)
+	var box, boxErr = boxExtractFunc(request)
 	if boxErr != nil {
 		return http.StatusInternalServerError, boxErr
 	}

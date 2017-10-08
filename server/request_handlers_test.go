@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"strconv"
 )
 
 const (
@@ -27,8 +26,8 @@ func TestEnv_CreateRequest_Success(t *testing.T) {
 	assert.Nil(t, jsonErr)
 
 	var env = &Env{
-		conf: getTotalConf(),
-		meetRequestDAO: &mocks.MeetRequestDAOMockSuccess{},
+		conf:             getTotalConf(),
+		meetRequestDAO:   &mocks.MeetRequestDAOMockSuccess{},
 		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
 	}
 	var tokenStr, _ = env.generateTokenString(mocks.RequesterId, "login")
@@ -262,7 +261,11 @@ func TestEnv_UpdateRequest_BadToken(t *testing.T) {
 }
 
 func TestEnv_UpdateRequest_NoRequest(t *testing.T) {
-	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockUpdateNoRequest{}}
+	var env = &Env{
+		conf:             getTotalConf(),
+		meetRequestDAO:   &mocks.MeetRequestDAOMockUpdateNoRequest{},
+		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
+	}
 	var tokenStr, _ = env.generateTokenString(1, "login")
 
 	var update = model.MeetRequestUpdate{Id: 1, Status: model.StatusAccepted}
@@ -331,7 +334,7 @@ func TestEnv_UpdateRequest_AcceptSuccess(t *testing.T) {
 func TestEnv_UpdateRequest_AcceptNotFound(t *testing.T) {
 	var env = &Env{
 		conf:             getTotalConf(),
-		meetRequestDAO:   &mocks.MeetRequestDAOMockGetPendingRequestByIdNotFound{},
+		meetRequestDAO:   &mocks.MeetRequestDAOMockGetRequestByIdNotFound{},
 		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
 	}
 	var tokenStr, _ = env.generateTokenString(mocks.RequestedId, "login")
@@ -359,7 +362,7 @@ func TestEnv_UpdateRequest_AcceptLocked(t *testing.T) {
 		meetRequestDAO:   &mocks.MeetRequestDAOMockSuccess{},
 		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
 	}
-	var request, _ = env.meetRequestDAO.GetPendingRequestById(1)
+	var request, _ = env.meetRequestDAO.GetRequestById(1)
 	env.handleRequestAccept(request.Id, request.RequestedId)
 
 	var tokenStr, _ = env.generateTokenString(request.RequestedId, "login")
@@ -408,8 +411,8 @@ func TestEnv_UpdateRequest_DeclineSuccess(t *testing.T) {
 
 func TestEnv_UpdateRequest_Error(t *testing.T) {
 	var env = &Env{
-		conf: getTotalConf(),
-		meetRequestDAO: &mocks.MeetRequestDAOMockUpdateError{},
+		conf:             getTotalConf(),
+		meetRequestDAO:   &mocks.MeetRequestDAOMockUpdateError{},
 		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
 	}
 	var tokenStr, _ = env.generateTokenString(mocks.RequestedId, "login")
@@ -429,11 +432,6 @@ func TestEnv_UpdateRequest_Error(t *testing.T) {
 
 	assert.Nil(t, recErr)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-
-	var box, _ = env.meetRequestCache.Get(strconv.Itoa(mocks.RequestedId))
-	var casted = box.(*mailBox)
-
-	assert.Equal(t, 0, len(casted.requestMap))
 }
 
 func TestEnv_GetNewRequests_Success(t *testing.T) {
@@ -442,7 +440,7 @@ func TestEnv_GetNewRequests_Success(t *testing.T) {
 		meetRequestDAO:   &mocks.MeetRequestDAOMockSuccess{},
 		meetRequestCache: cache.New(time.Second*defaultExpiration, time.Second*defaultCleanup),
 	}
-	var tokenStr, _ = env.generateTokenString(mocks.RequesterId, "login")
+	var tokenStr, _ = env.generateTokenString(mocks.RequestedId, "login")
 
 	env.handleRequestPending(10, mocks.RequesterId)
 	env.handleRequestPending(20, mocks.RequesterId)
@@ -459,12 +457,12 @@ func TestEnv_GetNewRequests_Success(t *testing.T) {
 	assert.Nil(t, recErr)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	var gotRequests = make([]*model.MeetRequest, 0)
+	var gotRequests = make(map[string][]*model.MeetRequest)
 	var jsonErr = json.Unmarshal(rec.Body.Bytes(), &gotRequests)
 
 	assert.Nil(t, jsonErr)
-	assert.Equal(t, 2, len(gotRequests))
-	for _, request := range gotRequests {
+	assert.Equal(t, 2, len(gotRequests["data"]))
+	for _, request := range gotRequests["data"] {
 		request.Status = model.StatusPending
 	}
 }
@@ -531,11 +529,11 @@ func TestEnv_GetNewRequests_Empty(t *testing.T) {
 	assert.Nil(t, recErr)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	var gotRequests = make([]*model.MeetRequest, 0)
+	var gotRequests = make(map[string][]*model.MeetRequest)
 	var jsonErr = json.Unmarshal(rec.Body.Bytes(), &gotRequests)
 
 	assert.Nil(t, jsonErr)
-	assert.Equal(t, 0, len(gotRequests))
+	assert.Equal(t, 0, len(gotRequests["data"]))
 }
 
 func getIncompleteToken(env *Env) (string, error) {

@@ -38,7 +38,7 @@ const (
 		UPDATE MeetRequest SET status = $1 WHERE id = $2 AND requestedId = $3
 	`
 	getRequestById = `
-		SELECT id, requesterId, requestedId, status, time FROM MeetRequest WHERE id = $1 AND status = 'PENDING'
+		SELECT id, requesterId, requestedId, status, time FROM MeetRequest WHERE id = $1
 	`
 	getLasRequestId = `
 		SELECT max(id) FROM MeetRequest
@@ -52,7 +52,7 @@ const (
 type MeetRequestDAO interface {
 	CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (id int, dbErr error)
 	GetRequests(requestedId int) ([]*model.MeetRequest, error)
-	GetPendingRequestById(id int) (*model.MeetRequest, error)
+	GetRequestById(id int) (*model.MeetRequest, error)
 	UpdateRequest(id int, requestedId int, status string) (int, error)
 }
 
@@ -66,7 +66,7 @@ func NewMeetDAO(db *sql.DB) MeetRequestDAO {
 	}
 }
 
-func (dao *meetRequestDAO) GetPendingRequestById(id int) (*model.MeetRequest, error) {
+func (dao *meetRequestDAO) GetRequestById(id int) (*model.MeetRequest, error) {
 	var r = new(model.MeetRequest)
 	var err = dao.db.QueryRow(getRequestById, id).Scan(&r.Id, &r.RequesterId, &r.RequestedId, &r.Status, &r.Time)
 	if err != nil {

@@ -38,7 +38,7 @@ func TestMeetRequestDAO_GetRequestById_Success(t *testing.T) {
 	}
 
 	var meetRequestDAO = NewMeetDAO(db)
-	var dbRequest, dbErr = meetRequestDAO.GetPendingRequestById(1)
+	var dbRequest, dbErr = meetRequestDAO.GetRequestById(1)
 
 	assert.Nil(t, dbErr)
 	assert.Equal(t, *request, *dbRequest)
@@ -60,7 +60,7 @@ func TestMeetRequestDAO_GetRequestById_NotFound(t *testing.T) {
 	)
 
 	var meetRequestDAO = NewMeetDAO(db)
-	var _, dbErr = meetRequestDAO.GetPendingRequestById(1)
+	var _, dbErr = meetRequestDAO.GetRequestById(1)
 
 	assert.NotNil(t, dbErr)
 }
