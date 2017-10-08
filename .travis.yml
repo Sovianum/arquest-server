@@ -6,6 +6,8 @@ go:
 - '1.8'
 deploy:
   provider: heroku
+  after_script:
+    go get -u github.com/tools/godep && godep save .
   app: 
     master: around-you-backend
   api_key:
