@@ -25,8 +25,8 @@ type Position struct {
 func (pos *Position) UnmarshalJSON(data []byte) error {
 	var err = checkPresence(
 		data,
-		[]string{"user_id", "point", "time"},
-		[]string{PositionRequiredUserId, PositionRequiredPoint, PositionRequireTime},
+		[]string{"point"},
+		[]string{PositionRequiredPoint},
 	)
 	if err != nil {
 		return err

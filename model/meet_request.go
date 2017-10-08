@@ -11,5 +11,5 @@ type MeetRequest struct {
 	RequesterId int        `json:"requester_id"`
 	RequestedId int        `json:"requested_id"`
 	Time        QuotedTime `json:"time"`
-	Status      string
+	Status      string     `json:"status"`
 }

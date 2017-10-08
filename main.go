@@ -5,7 +5,6 @@ import (
 	_ "github.com/lib/pq"
 	"os"
 	"github.com/Sovianum/acquaintanceServer/config"
-	"github.com/gorilla/mux"
 	"github.com/Sovianum/acquaintanceServer/server"
 	"net/http"
 	"github.com/gorilla/handlers"
@@ -28,9 +27,7 @@ func main() {
 	defer db.Close()
 
 	var env = server.NewEnv(db, conf)
-
-	var router = mux.NewRouter()
-	router.HandleFunc("/user/register/", env.UserRegisterPost)
+	var router = server.GetRouter(env)
 	http.ListenAndServe(":3000", handlers.LoggingHandler(os.Stdout, router))
 	//http.ListenAndServe(":3000", server.LoggingHandler(os.Stdout, r))
 

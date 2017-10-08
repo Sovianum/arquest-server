@@ -31,10 +31,7 @@ func (env *Env) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		w.Write(common.GetErrorJson(tokenErr))
 		return
 	}
-	if userId != meetRequest.RequesterId {
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
+	meetRequest.RequesterId = userId
 
 	var requestId, dbErr = env.meetRequestDAO.CreateRequest(
 		meetRequest.RequesterId, meetRequest.RequestedId, env.conf.Logic.RequestExpiration, env.conf.Logic.Distance,
@@ -45,7 +42,8 @@ func (env *Env) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if requestId == dao.ImpossibleID {
-		w.WriteHeader(http.StatusConflict)
+		w.WriteHeader(http.StatusForbidden)
+		w.Write(common.GetEmptyJson())
 		return
 	}
 	var code, err = env.handleRequestPending(requestId, userId)
@@ -54,6 +52,8 @@ func (env *Env) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		w.Write(common.GetErrorJson(err))
 		return
 	}
+
+	w.Write(common.GetEmptyJson())
 }
 
 func (env *Env) GetRequests(w http.ResponseWriter, r *http.Request) {
@@ -127,6 +127,8 @@ func (env *Env) UpdateRequest(w http.ResponseWriter, r *http.Request) {
 		w.Write(common.GetErrorJson(errors.New(requestNotFound)))
 		return
 	}
+
+	w.Write(common.GetEmptyJson())
 }
 
 func (env *Env) GetNewRequests(w http.ResponseWriter, r *http.Request) {
@@ -261,15 +263,9 @@ func parseRequest(r *http.Request) (*model.MeetRequest, int, error) {
 	}
 
 	var request = new(model.MeetRequest)
-	request.RequestedId = -1
-	request.RequesterId = -1
 
 	if err := json.Unmarshal(body, &request); err != nil {
 		return nil, http.StatusBadRequest, err
-	}
-
-	if request.RequesterId == -1 || request.RequestedId == -1 {
-		return nil, http.StatusBadRequest, errors.New("Empty request")
 	}
 
 	return request, http.StatusOK, nil

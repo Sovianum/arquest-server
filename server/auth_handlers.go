@@ -33,6 +33,7 @@ func (env *Env) UserRegisterPost(w http.ResponseWriter, r *http.Request) {
 	}
 	if exists {
 		w.WriteHeader(http.StatusConflict)
+		w.Write(common.GetErrorJson(errors.New("user already exists")))
 		return
 	}
 
@@ -59,7 +60,7 @@ func (env *Env) UserRegisterPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte(tokenString))
+	w.Write(common.GetDataJson(tokenString))
 }
 
 func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
@@ -78,6 +79,7 @@ func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
 	}
 	if !exists {
 		w.WriteHeader(http.StatusNotFound)
+		w.Write(common.GetErrorJson(errors.New("not found")))
 		return
 	}
 
@@ -102,7 +104,7 @@ func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte(tokenString))
+	w.Write(common.GetDataJson(tokenString))
 }
 
 func (env *Env) generateTokenString(id int, login string) (string, error) {

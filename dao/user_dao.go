@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	saveUser          = `INSERT INTO Users (login, password, age, sex, about) SELECT $1, $2, $3, $4, $5`
+	saveUser          = `INSERT INTO Users (login, password, age, sex, about) VALUES ($1, $2, $3, $4, $5)`
 	getUserById       = `SELECT id, login, password, age, sex, about FROM Users WHERE id = $1`
 	getUserByLogin    = `SELECT id, login, password, age, sex, about FROM Users WHERE login = $1`
 	getIdByLogin      = `SELECT id FROM Users WHERE login = $1`
@@ -15,7 +15,9 @@ const (
 						 	JOIN Users u2 ON u2.id != u1.id
 						 	JOIN Position p1 ON u1.id = p1.id
 						 	JOIN Position p2 ON u2.id = p2.id
-						 WHERE u1.id = $1 AND ST_DistanceSphere(p1.geom, p2.geom) <= $2 AND age(current_timestamp, p2.time) < '$3 minutes'`
+						 WHERE u1.id = $1
+							AND ST_DistanceSphere(p1.point, p2.point) <= $2
+							AND age(current_timestamp, p2.time) < $3 * interval '1 minute'`
 	checkUserById = `SELECT count(*) cnt FROM Users u WHERE u.id = $1`
 	checkUserByLogin = `SELECT count(*) cnt FROM Users u WHERE u.login = $1`
 )

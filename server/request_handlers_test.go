@@ -80,27 +80,6 @@ func TestEnv_CreateRequest_BadToken(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
-func TestEnv_CreateRequest_WrongRequesterId(t *testing.T) {
-	var meetRequest = model.MeetRequest{RequesterId: 3, RequestedId: 2}
-	var requestMsg, jsonErr = json.Marshal(meetRequest)
-	assert.Nil(t, jsonErr)
-
-	var env = &Env{conf: getTotalConf(), meetRequestDAO: &mocks.MeetRequestDAOMockSuccess{}}
-	var tokenStr, _ = env.generateTokenString(1, "login")
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.CreateRequest,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusForbidden, rec.Code)
-}
-
 func TestEnv_CreateRequest_Conflict(t *testing.T) {
 	var meetRequest = model.MeetRequest{RequesterId: 1, RequestedId: 2}
 	var requestMsg, jsonErr = json.Marshal(meetRequest)
@@ -119,7 +98,7 @@ func TestEnv_CreateRequest_Conflict(t *testing.T) {
 	)
 
 	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusConflict, rec.Code)
+	assert.Equal(t, http.StatusForbidden, rec.Code)
 }
 
 func TestEnv_CreateRequest_Error(t *testing.T) {

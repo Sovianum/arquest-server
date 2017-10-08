@@ -13,7 +13,7 @@ CREATE TYPE REQUEST_STATUS AS ENUM ('PENDING', 'ACCEPTED', 'DECLINED');
 CREATE TABLE Users (
   id       SERIAL PRIMARY KEY,
   login    VARCHAR(50) UNIQUE ,
-  password VARCHAR(50),
+  password BYTEA,
   sex      SEX NOT NULL DEFAULT '',
   age      INT,
   about    VARCHAR(1000)

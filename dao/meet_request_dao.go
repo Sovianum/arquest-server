@@ -11,28 +11,28 @@ const (
 		WHERE requesterId = $1 AND requestedId = $2 AND status = 'PENDING'
 	`
 	getPendingRequests = `
-		SELECT id, requesterId, requestedId, status, time FROM MeetRequest mr
+		SELECT mr.id, mr.requesterId, mr.requestedId, mr.status, mr.time FROM MeetRequest mr
 			JOIN Users u ON mr.requesterId = u.id
 			JOIN Position p ON p.userId = u.id
 		WHERE mr.requestedId = $1 AND status = 'PENDING'
 	`
 	checkAccessibility = `
-		SELECT ST_DistanceSphere(p1.geom, p2.geom) < $1 FROM
+		SELECT ST_DistanceSphere(p1.point, p2.point) < $1 FROM
 			(
 				SELECT * FROM Position
-				WHERE userId = $2 AND age(now(), time) < '$4 minutes'
+				WHERE userId = $2 AND age(now(), time) < $4 * interval '1 minute'
 				ORDER BY time DESC
 				LIMIT 1
 			) p1,
 			(
 				SELECT * FROM Position
-				WHERE userId = $3 AND age(now(), time) < '$4 minutes'
+				WHERE userId = $3 AND age(now(), time) < $4 * interval '1 minute'
 				ORDER BY time DESC
 				LIMIT 1
 			) p2
 	`
 	createRequest = `
-		INSERT INTO MeetRequest (requesterId, requestedId) SELECT $1, $2
+		INSERT INTO MeetRequest (requesterId, requestedId) VALUES ($1, $2)
 	`
 	updateRequestStatus = `
 		UPDATE MeetRequest SET status = $1 WHERE id = $2 AND requestedId = $3

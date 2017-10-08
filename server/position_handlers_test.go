@@ -54,11 +54,11 @@ func TestEnv_UserGetNeighboursGet_Success(t *testing.T) {
 	assert.Nil(t, recErr)
 	assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	var gotNeighbourPositions = make([]*model.User, 0)
+	var gotNeighbourPositions = make(map[string][]*model.User)
 	var jsonErr = json.Unmarshal(rec.Body.Bytes(), &gotNeighbourPositions)
 
 	assert.Nil(t, jsonErr)
-	assert.Equal(t, 2, len(gotNeighbourPositions))
+	assert.Equal(t, 2, len(gotNeighbourPositions["data"]))
 }
 
 func TestEnv_UserGetNeighboursGet_BadToken(t *testing.T) {
@@ -243,35 +243,6 @@ func TestEnv_UserSavePositionPost_BadToken(t *testing.T) {
 
 	assert.Nil(t, recErr)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-}
-
-func TestEnv_UserSavePositionPost_WrongId(t *testing.T) {
-	var date = time.Date(2003, 10, 17, 0, 0, 0, 0, time.UTC)
-	var pos = &model.Position{
-		UserId: 1,
-		Point:  model.Point{X: 100, Y: 200},
-		Time:   model.QuotedTime(date),
-	}
-
-	var env = &Env{
-		conf: getAuthConf(),
-	}
-
-	var requestMsg, jsonErr = json.Marshal(pos)
-	assert.Nil(t, jsonErr)
-
-	var tokenStr, _ = env.generateTokenString(10, "login")
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserSavePositionPost,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-		headerPair{authorizationStr, fmt.Sprintf("Bearer %s", tokenStr)},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusForbidden, rec.Code)
 }
 
 func TestEnv_UserSavePositionPost_SaveErr(t *testing.T) {

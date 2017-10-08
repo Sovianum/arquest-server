@@ -31,14 +31,7 @@ func (env *Env) UserGetNeighboursGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var msg, msgErr = json.Marshal(neighbours)
-	if msgErr != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(common.GetErrorJson(msgErr))
-		return
-	}
-
-	w.Write([]byte(msg))
+	w.Write(common.GetDataJson(neighbours))
 }
 
 func (env *Env) UserSavePositionPost(w http.ResponseWriter, r *http.Request) {
@@ -55,11 +48,7 @@ func (env *Env) UserSavePositionPost(w http.ResponseWriter, r *http.Request) {
 		w.Write(common.GetErrorJson(parseErr))
 		return
 	}
-
-	if position.UserId != userId {
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
+	position.UserId = userId
 
 	var saveErr = env.positionDAO.Save(position)
 	if saveErr != nil {
@@ -67,6 +56,8 @@ func (env *Env) UserSavePositionPost(w http.ResponseWriter, r *http.Request) {
 		w.Write(common.GetErrorJson(saveErr))
 		return
 	}
+
+	w.Write(common.GetEmptyJson())
 }
 
 func parsePosition(r *http.Request) (*model.Position, int, error) {
