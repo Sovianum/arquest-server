@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	confFile = "resources/conf/config.json"
+	confFile = "resources/config.json"
 )
 
 func main() {
@@ -29,13 +29,6 @@ func main() {
 	var env = server.NewEnv(db, conf)
 	var router = server.GetRouter(env)
 	http.ListenAndServe(":3000", handlers.LoggingHandler(os.Stdout, router))
-	//http.ListenAndServe(":3000", server.LoggingHandler(os.Stdout, r))
-
-	//var logFileWriter, logErr = os.Create(conf.LogFile)
-	//if logErr != nil {
-	//	panic(logErr)
-	//}
-	//defer logFileWriter.Close()
 }
 
 func getConf() config.Conf {

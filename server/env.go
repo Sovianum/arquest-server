@@ -13,7 +13,7 @@ import (
 type tokenKeyGetterType func() string
 
 func NewEnv(db *sql.DB, conf config.Conf) *Env {
-	return &Env{
+	var env = &Env{
 		userDAO:dao.NewDBUserDAO(db),
 		positionDAO:dao.NewDBPositionDAO(db),
 		meetRequestDAO:dao.NewMeetDAO(db),
@@ -38,6 +38,9 @@ func NewEnv(db *sql.DB, conf config.Conf) *Env {
 			return nil
 		},
 	}
+
+	env.RunDaemons()
+	return env
 }
 
 type Env struct {

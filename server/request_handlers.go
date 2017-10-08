@@ -96,14 +96,14 @@ func (env *Env) UpdateRequest(w http.ResponseWriter, r *http.Request) {
 
 	var rowsAffected, dbErr = env.meetRequestDAO.UpdateRequest(update.Id, userId, update.Status)
 	if dbErr != nil {
-		env.revertCache(update.Id, userId)
+		env.rollBackCache(update.Id, userId)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(common.GetErrorJson(dbErr))
 		return
 	}
 
 	if rowsAffected == 0 {
-		env.revertCache(update.Id, userId)
+		env.rollBackCache(update.Id, userId)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write(common.GetErrorJson(errors.New(requestNotFound)))
 		return
@@ -149,7 +149,7 @@ func (env *Env) GetNewRequests(w http.ResponseWriter, r *http.Request) {
 	w.Write(common.GetDataJson(newRequestData))
 }
 
-func (env *Env) revertCache(requestId int, userId int) {
+func (env *Env) rollBackCache(requestId int, userId int) {
 	var box, found = env.meetRequestCache.Get(strconv.Itoa(userId))
 	if !found {
 		return

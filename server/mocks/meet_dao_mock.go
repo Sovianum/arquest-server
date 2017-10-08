@@ -85,6 +85,8 @@ func (*MeetRequestDAOMockSuccess) GetRequestById(id int) (*model.MeetRequest, er
 	return getPendingRequestByIdSuccess(id)
 }
 
+func (*MeetRequestDAOMockSuccess) DeclineAll(timeoutMin int) error {return nil}
+
 type MeetRequestDAOMockCreateConflict struct{}
 
 func (*MeetRequestDAOMockCreateConflict) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error) {
@@ -102,6 +104,8 @@ func (*MeetRequestDAOMockCreateConflict) UpdateRequest(id int, requestedId int, 
 func (*MeetRequestDAOMockCreateConflict) GetRequestById(id int) (*model.MeetRequest, error) {
 	return getPendingRequestByIdSuccess(id)
 }
+
+func (*MeetRequestDAOMockCreateConflict) DeclineAll(timeoutMin int) error {return nil}
 
 type MeetRequestDAOMockCreateError struct{}
 
@@ -121,6 +125,8 @@ func (*MeetRequestDAOMockCreateError) GetRequestById(id int) (*model.MeetRequest
 	return getPendingRequestByIdSuccess(id)
 }
 
+func (*MeetRequestDAOMockCreateError) DeclineAll(timeoutMin int) error {return nil}
+
 type MeetRequestDAOMockGetRequestsEmpty struct{}
 
 func (*MeetRequestDAOMockGetRequestsEmpty) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error) {
@@ -138,6 +144,8 @@ func (*MeetRequestDAOMockGetRequestsEmpty) UpdateRequest(id int, requestedId int
 func (*MeetRequestDAOMockGetRequestsEmpty) GetRequestById(id int) (*model.MeetRequest, error) {
 	return getPendingRequestByIdSuccess(id)
 }
+
+func (*MeetRequestDAOMockGetRequestsEmpty) DeclineAll(timeoutMin int) error {return nil}
 
 type MeetRequestDAOMockGetRequestsError struct{}
 
@@ -157,6 +165,8 @@ func (*MeetRequestDAOMockGetRequestsError) GetRequestById(id int) (*model.MeetRe
 	return getPendingRequestByIdSuccess(id)
 }
 
+func (*MeetRequestDAOMockGetRequestsError) DeclineAll(timeoutMin int) error {return nil}
+
 type MeetRequestDAOMockUpdateNoRequest struct{}
 
 func (*MeetRequestDAOMockUpdateNoRequest) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error) {
@@ -174,6 +184,8 @@ func (*MeetRequestDAOMockUpdateNoRequest) UpdateRequest(id int, requestedId int,
 func (*MeetRequestDAOMockUpdateNoRequest) GetRequestById(id int) (*model.MeetRequest, error) {
 	return getPendingRequestByIdSuccess(id)
 }
+
+func (*MeetRequestDAOMockUpdateNoRequest) DeclineAll(timeoutMin int) error {return nil}
 
 type MeetRequestDAOMockUpdateError struct{}
 
@@ -193,6 +205,8 @@ func (*MeetRequestDAOMockUpdateError) GetRequestById(id int) (*model.MeetRequest
 	return getPendingRequestByIdSuccess(id)
 }
 
+func (*MeetRequestDAOMockUpdateError) DeclineAll(timeoutMin int) error {return nil}
+
 type MeetRequestDAOMockGetRequestByIdNotFound struct{}
 
 func (*MeetRequestDAOMockGetRequestByIdNotFound) CreateRequest(requesterId int, requestedId int, requestTimeoutMin int, maxDistance float64) (code int, dbErr error) {
@@ -210,3 +224,5 @@ func (*MeetRequestDAOMockGetRequestByIdNotFound) UpdateRequest(id int, requested
 func (*MeetRequestDAOMockGetRequestByIdNotFound) GetRequestById(id int) (*model.MeetRequest, error) {
 	return getPendingRequestByIdNotFound(id)
 }
+
+func (*MeetRequestDAOMockGetRequestByIdNotFound) DeclineAll(timeoutMin int) error {return nil}

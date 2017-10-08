@@ -43,6 +43,9 @@ const (
 	getLasRequestId = `
 		SELECT max(id) FROM MeetRequest
 	`
+	declineAll = `
+		UPDATE MeetRequest SET status = 'DECLINED' WHERE status = 'PENDING' AND age(now(), time) > $1 * interval '1 minute'
+	`
 )
 
 const (
@@ -54,6 +57,7 @@ type MeetRequestDAO interface {
 	GetRequests(requestedId int) ([]*model.MeetRequest, error)
 	GetRequestById(id int) (*model.MeetRequest, error)
 	UpdateRequest(id int, requestedId int, status string) (int, error)
+	DeclineAll(timeoutMin int) error
 }
 
 type meetRequestDAO struct {
@@ -133,6 +137,11 @@ func (dao *meetRequestDAO) UpdateRequest(id int, requestedId int, status string)
 	}
 
 	return int(rowsAffected), nil
+}
+
+func (dao *meetRequestDAO) DeclineAll(timeoutMin int) error {
+	var _, err = dao.db.Exec(declineAll, timeoutMin)
+	return err
 }
 
 func (dao *meetRequestDAO) isAccessible(id1 int, id2 int, maxDistance float64, timeoutMin int) (bool, error) {
