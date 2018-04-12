@@ -2,8 +2,6 @@ package common
 
 import (
 	"encoding/json"
-	"github.com/Sovianum/arquest-server/mylog"
-	"net/http"
 )
 
 type ResponseMsg struct {
@@ -33,13 +31,4 @@ func GetErrorJson(err error) []byte {
 func GetDataJson(data interface{}) []byte {
 	msg, _ := json.Marshal(ResponseMsg{Data: data})
 	return msg
-}
-
-func GetEmptyJson() []byte {
-	return []byte("{}")
-}
-
-func WriteWithLogging(r *http.Request, w http.ResponseWriter, body []byte, logger *mylog.Logger) {
-	logger.LogResponseBody(r, string(body))
-	w.Write(body)
 }

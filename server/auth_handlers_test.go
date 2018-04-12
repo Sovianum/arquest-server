@@ -9,6 +9,7 @@ import (
 	"github.com/Sovianum/arquest-server/dao"
 	"github.com/Sovianum/arquest-server/model"
 	"github.com/Sovianum/arquest-server/mylog"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
 	"io"
@@ -20,7 +21,7 @@ import (
 )
 
 const (
-	urlSample  = "URL"
+	urlSample  = "/URL"
 	expireDays = 100
 	tokenKey   = "token90"
 )
@@ -65,28 +66,22 @@ func getAuthConf() *config.Conf {
 func getRecorder(
 	url string,
 	method string,
-	handlerFunc func(http.ResponseWriter, *http.Request),
+	handlerFunc func(c *gin.Context),
 	body io.Reader,
 	headers ...headerPair,
 ) (*httptest.ResponseRecorder, error) {
-	var req, err = http.NewRequest(
-		method,
-		url,
-		body,
-	)
-
-	for _, hp := range headers {
-		req.Header.Set(hp.key, hp.value)
-	}
-
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return nil, err
 	}
+	for _, hp := range headers {
+		req.Header.Set(hp.key, hp.value)
+	}
+	rec := httptest.NewRecorder()
 
-	var handler = http.HandlerFunc(handlerFunc)
-	var rec = httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
+	eng := gin.New()
+	eng.Handle(method, url, handlerFunc)
+	eng.ServeHTTP(rec, req)
 	return rec, nil
 }
 
@@ -114,6 +109,7 @@ func (s *AuthTestSuite) SetupTest() {
 	s.env = getEnv(s.db)
 	s.hash, _ = s.env.hashFunc([]byte(s.user.Password))
 	s.env.logger = mylog.NewLogger(ioutil.Discard)
+	gin.SetMode(gin.ReleaseMode)
 }
 
 func (s *AuthTestSuite) TestRegisterSuccess() {

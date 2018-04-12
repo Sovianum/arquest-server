@@ -15,8 +15,8 @@ const (
 )
 
 type UserDAO interface {
-	Save(user *model.User) (int, error)
-	GetUserById(id int) (*model.User, error)
+	Save(user model.User) (int, error)
+	GetUserById(id int) (model.User, error)
 	GetUserByLogin(login string) (*model.User, error)
 	GetIdByLogin(login string) (int, error)
 	ExistsById(id int) (bool, error)
@@ -33,7 +33,7 @@ func NewDBUserDAO(db *sql.DB) UserDAO {
 	return result
 }
 
-func (dao *dbUserDAO) Save(user *model.User) (int, error) {
+func (dao *dbUserDAO) Save(user model.User) (int, error) {
 	_, saveErr := dao.db.Exec(saveUser, user.Login, user.Password, user.Age, user.Sex, user.About)
 	if saveErr != nil {
 		return 0, saveErr
@@ -52,11 +52,11 @@ func (dao *dbUserDAO) GetIdByLogin(login string) (int, error) {
 	return dao.getIdByLogin(login)
 }
 
-func (dao *dbUserDAO) GetUserById(id int) (*model.User, error) {
-	u := new(model.User)
+func (dao *dbUserDAO) GetUserById(id int) (model.User, error) {
+	u := model.User{}
 	err := dao.db.QueryRow(getUserById, id).Scan(&u.Id, &u.Login, &u.Password, &u.Age, &u.Sex, &u.About)
 	if err != nil {
-		return nil, err
+		return u, err
 	}
 	return u, nil
 }

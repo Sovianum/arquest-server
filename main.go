@@ -33,7 +33,7 @@ func main() {
 	}
 
 	env := server.NewEnv(db, conf, logger)
-	router := server.GetRouter(env)
+	router := server.GetEngine(env)
 
 	portLine := fmt.Sprintf(":%d", getServerPort(conf, logger))
 	http.ListenAndServe(portLine, handlers.LoggingHandler(os.Stdout, router))

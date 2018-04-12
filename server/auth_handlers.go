@@ -1,12 +1,11 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/Sovianum/arquest-server/common"
 	"github.com/Sovianum/arquest-server/model"
 	"github.com/dgrijalva/jwt-go"
-	"io/ioutil"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"time"
 )
@@ -19,147 +18,117 @@ const (
 
 var notFoundErr = fmt.Errorf("not found")
 
-func (env *Env) UserRegisterPost(w http.ResponseWriter, r *http.Request) {
-	env.logger.LogRequestStart(r)
-	u, code, parseErr := parseUser(r)
-	if parseErr != nil {
-		env.logger.LogRequestError(r, parseErr)
-		w.WriteHeader(code)
-		common.WriteWithLogging(r, w, common.GetErrorJson(parseErr), env.logger)
+func (env *Env) UserRegisterPost(c *gin.Context) {
+	var user model.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, common.GetErrorJson(err))
 		return
 	}
+	if code, err := validateUser(&user); err != nil {
+		c.JSON(code, common.GetErrorJson(err))
+	}
 
-	exists, existsErr := env.userDAO.ExistsByLogin(u.Login)
+	exists, existsErr := env.userDAO.ExistsByLogin(user.Login)
 	if existsErr != nil {
-		env.logger.LogRequestError(r, existsErr)
-		w.WriteHeader(http.StatusInternalServerError)
-		common.WriteWithLogging(r, w, common.GetErrorJson(existsErr), env.logger)
+		c.JSON(http.StatusInternalServerError, common.GetErrorJson(existsErr))
 		return
 	}
 	if exists {
-		err := fmt.Errorf("user already exists")
-		env.logger.LogRequestError(r, err)
-		w.WriteHeader(http.StatusConflict)
-		common.WriteWithLogging(r, w, common.GetErrorJson(err), env.logger)
+		c.JSON(http.StatusConflict, common.GetErrorJson(fmt.Errorf("user already exists")))
 		return
 	}
 
-	hash, err := env.hashFunc([]byte(u.Password))
+	hash, err := env.hashFunc([]byte(user.Password))
 	if err != nil {
-		env.logger.LogRequestError(r, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		common.WriteWithLogging(r, w, common.GetErrorJson(err), env.logger)
+		c.JSON(http.StatusInternalServerError, common.GetErrorJson(err))
 		return
 	}
-	u.Password = string(hash)
+	user.Password = string(hash)
 
-	userId, saveErr := env.userDAO.Save(u)
+	userId, saveErr := env.userDAO.Save(user)
 	if saveErr != nil {
-		env.logger.LogRequestError(r, saveErr)
-		w.WriteHeader(http.StatusInternalServerError)
-		common.WriteWithLogging(r, w, common.GetErrorJson(saveErr), env.logger)
+		c.JSON(http.StatusInternalServerError, common.GetErrorJson(saveErr))
 		return
 	}
 
-	tokenString, tokenErr := env.generateTokenString(userId, u.Login)
+	tokenString, tokenErr := env.generateTokenString(userId, user.Login)
 	if tokenErr != nil {
-		env.logger.LogRequestError(r, tokenErr)
-		w.WriteHeader(http.StatusInternalServerError)
-		common.WriteWithLogging(r, w, common.GetErrorJson(tokenErr), env.logger)
+		c.JSON(http.StatusInternalServerError, common.GetErrorJson(tokenErr))
 		// TODO add info that u has been successfully saved
 		return
 	}
-
-	env.logger.LogRequestSuccess(r)
-	common.WriteWithLogging(r, w, common.GetDataJson(tokenString), env.logger)
+	c.JSON(http.StatusOK, common.GetDataJson(tokenString))
 }
 
-func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
-	env.logger.LogRequestStart(r)
-	u, code, parseErr := parseUser(r)
-	if parseErr != nil {
-		env.logger.LogRequestError(r, parseErr)
-		w.WriteHeader(code)
-		common.WriteWithLogging(r, w, common.GetErrorJson(parseErr), env.logger)
+func (env *Env) UserSignInPost(c *gin.Context) {
+	var user model.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, common.GetErrorJson(err))
 		return
 	}
+	if code, err := validateUser(&user); err != nil {
+		c.JSON(code, common.GetErrorJson(err))
+	}
 
-	exists, existsErr := env.userDAO.ExistsByLogin(u.Login)
+	exists, existsErr := env.userDAO.ExistsByLogin(user.Login)
 	if existsErr != nil {
-		env.logger.LogRequestError(r, existsErr)
-		w.WriteHeader(http.StatusInternalServerError)
-		common.WriteWithLogging(r, w, common.GetErrorJson(existsErr), env.logger)
+		c.JSON(http.StatusInternalServerError, common.GetErrorJson(existsErr))
 		return
 	}
 	if !exists {
-		env.logger.LogRequestError(r, notFoundErr)
-		w.WriteHeader(http.StatusNotFound)
-		common.WriteWithLogging(r, w, common.GetErrorJson(notFoundErr), env.logger)
+		c.JSON(http.StatusNotFound, common.GetErrorJson(notFoundErr))
 		return
 	}
 
-	dbUser, dbErr := env.userDAO.GetUserByLogin(u.Login)
+	dbUser, dbErr := env.userDAO.GetUserByLogin(user.Login)
 	if dbErr != nil {
-		env.logger.LogRequestError(r, dbErr)
-		w.WriteHeader(http.StatusInternalServerError)
-		common.WriteWithLogging(r, w, common.GetErrorJson(dbErr), env.logger)
+		c.JSON(http.StatusInternalServerError, common.GetErrorJson(dbErr))
 		return
 	}
 
-	if err := env.hashValidator([]byte(u.Password), []byte(dbUser.Password)); err != nil {
-		env.logger.LogRequestError(r, err)
-		w.WriteHeader(http.StatusNotFound)
-		common.WriteWithLogging(r, w, common.GetErrorJson(err), env.logger)
+	if err := env.hashValidator([]byte(user.Password), []byte(dbUser.Password)); err != nil {
+		c.JSON(http.StatusNotFound, common.GetErrorJson(err))
 		return
 	}
 
 	tokenString, tokenErr := env.generateTokenString(dbUser.Id, dbUser.Login)
 	if tokenErr != nil {
-		env.logger.LogRequestError(r, tokenErr)
-		w.WriteHeader(http.StatusInternalServerError)
-		common.WriteWithLogging(r, w, common.GetErrorJson(tokenErr), env.logger)
+		c.JSON(http.StatusInternalServerError, common.GetErrorJson(tokenErr))
+		return
 		// TODO add info that u has been successfully saved
+	}
+	c.JSON(http.StatusOK, common.GetDataJson(tokenString))
+}
+
+func (env *Env) UserGetSelfInfo(c *gin.Context) {
+	var user model.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, common.GetErrorJson(err))
 		return
 	}
 
-	env.logger.LogRequestSuccess(r)
-	common.WriteWithLogging(r, w, common.GetDataJson(tokenString), env.logger)
-}
-
-func (env *Env) UserGetSelfInfo(w http.ResponseWriter, r *http.Request) {
-	env.logger.LogRequestStart(r)
-	userId, idCode, idErr := env.getIdFromRequest(r)
+	userId, idCode, idErr := env.getIdFromRequest(c.Request)
 	if idErr != nil {
-		env.logger.LogRequestError(r, idErr)
-		w.WriteHeader(idCode)
-		common.WriteWithLogging(r, w, common.GetErrorJson(idErr), env.logger)
+		c.JSON(idCode, common.GetErrorJson(idErr))
 		return
 	}
 
 	exists, existsErr := env.userDAO.ExistsById(userId)
 	if existsErr != nil {
-		env.logger.LogRequestError(r, existsErr)
-		w.WriteHeader(http.StatusInternalServerError)
-		common.WriteWithLogging(r, w, common.GetErrorJson(existsErr), env.logger)
+		c.JSON(http.StatusInternalServerError, common.GetErrorJson(existsErr))
 		return
 	}
 	if !exists {
-		env.logger.LogRequestError(r, notFoundErr)
-		w.WriteHeader(http.StatusNotFound)
-		common.WriteWithLogging(r, w, common.GetErrorJson(notFoundErr), env.logger)
+		c.JSON(http.StatusNotFound, common.GetErrorJson(notFoundErr))
 		return
 	}
 
 	var dbUser, dbErr = env.userDAO.GetUserById(userId)
 	if dbErr != nil {
-		env.logger.LogRequestError(r, dbErr)
-		w.WriteHeader(http.StatusInternalServerError)
-		common.WriteWithLogging(r, w, common.GetErrorJson(dbErr), env.logger)
+		c.JSON(http.StatusInternalServerError, common.GetErrorJson(dbErr))
 		return
 	}
-
-	env.logger.LogRequestSuccess(r)
-	common.WriteWithLogging(r, w, common.GetDataJson(dbUser), env.logger)
+	c.JSON(http.StatusOK, common.GetDataJson(dbUser))
 }
 
 func (env *Env) generateTokenString(id int, login string) (string, error) {
@@ -174,24 +143,9 @@ func (env *Env) generateTokenString(id int, login string) (string, error) {
 	return t.SignedString(tokenKey)
 }
 
-func parseUser(r *http.Request) (*model.User, int, error) {
-	var body, err = ioutil.ReadAll(r.Body)
-	if err != nil {
-		return nil, http.StatusBadRequest, err
+func validateUser(user *model.User) (int, error) {
+	if user.Login == "" || user.Password == "" {
+		return http.StatusBadRequest, fmt.Errorf("empty user")
 	}
-
-	if err := r.Body.Close(); err != nil {
-		return nil, http.StatusInternalServerError, err
-	}
-
-	var u = new(model.User)
-	if err := json.Unmarshal(body, &u); err != nil {
-		return nil, http.StatusBadRequest, err
-	}
-
-	if u.Login == "" || u.Password == "" {
-		return nil, http.StatusBadRequest, fmt.Errorf("empty user")
-	}
-
-	return u, http.StatusOK, nil
+	return http.StatusOK, nil
 }

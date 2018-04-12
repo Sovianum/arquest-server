@@ -1,15 +1,15 @@
 package server
 
 import (
-	"github.com/gorilla/mux"
-	"net/http"
+	"github.com/gin-gonic/gin"
 )
 
-func GetRouter(env *Env) *mux.Router {
-	router := mux.NewRouter()
-	router.HandleFunc("/api/v1/auth/register", env.UserRegisterPost).Methods(http.MethodPost)
-	router.HandleFunc("/api/v1/auth/login", env.UserSignInPost).Methods(http.MethodPost)
-	router.HandleFunc("/api/v1/user/self", env.UserGetSelfInfo).Methods(http.MethodGet)
+func GetEngine(env *Env) *gin.Engine {
+	router := gin.Default()
+
+	router.POST("/api/v1/auth/register", env.UserRegisterPost)
+	router.POST("/api/v1/auth/login", env.UserSignInPost)
+	router.GET("/api/v1/user/self", env.UserGetSelfInfo)
 
 	return router
 }

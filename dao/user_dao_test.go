@@ -126,7 +126,7 @@ func (s *UserTestSuite) TestSaveSuccess() {
 		WithArgs("login").
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
-	user := &model.User{Login: "login", Password: string(s.passHash), Sex: model.FEMALE, Age: 100}
+	user := model.User{Login: "login", Password: string(s.passHash), Sex: model.FEMALE, Age: 100}
 
 	userDAO := NewDBUserDAO(s.db)
 	id, saveErr := userDAO.Save(user)
@@ -146,7 +146,7 @@ func (s *UserTestSuite) TestSaveDuplicateLogin() {
 		WithArgs("login").
 		WillReturnError(fmt.Errorf("duplicate id"))
 
-	user := &model.User{Login: "login", Password: string(s.passHash), Sex: model.FEMALE, Age: 100}
+	user := model.User{Login: "login", Password: string(s.passHash), Sex: model.FEMALE, Age: 100}
 
 	userDAO := NewDBUserDAO(s.db)
 	_, saveErr := userDAO.Save(user)
@@ -164,7 +164,7 @@ func (s *UserTestSuite) TestGetUserByIdSuccess() {
 		WithArgs(1).
 		WillReturnRows(rows)
 
-	user := &model.User{Id: 1, Login: "login", Password: "pass", Sex: model.MALE, Age: 100, About: "about"}
+	user := model.User{Id: 1, Login: "login", Password: "pass", Sex: model.MALE, Age: 100, About: "about"}
 	dbUser, userErr := s.userDAO.GetUserById(1)
 
 	s.NoError(userErr)
