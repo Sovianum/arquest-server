@@ -2,7 +2,6 @@ package mylog
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/op/go-logging"
 	"io"
@@ -17,16 +16,16 @@ const (
 
 func TestLogger_LogRequestStart(t *testing.T) {
 	var writer bytes.Buffer
-	var logger = getLogger(&writer)
-	var req, _ = http.NewRequest(
+	logger := getLogger(&writer)
+	req, _ := http.NewRequest(
 		method,
 		url,
 		nil,
 	)
 
 	logger.LogRequestStart(req)
-	var msg = string(writer.Bytes())
-	var expected = fmt.Sprintf(
+	msg := string(writer.Bytes())
+	expected := fmt.Sprintf(
 		requestStartLogTemplate,
 		req.URL.Path,
 		req.Method,
@@ -39,16 +38,16 @@ func TestLogger_LogRequestStart(t *testing.T) {
 
 func TestLogger_LogRequestSuccess(t *testing.T) {
 	var writer bytes.Buffer
-	var logger = getLogger(&writer)
-	var req, _ = http.NewRequest(
+	logger := getLogger(&writer)
+	req, _ := http.NewRequest(
 		method,
 		url,
 		nil,
 	)
 
 	logger.LogRequestSuccess(req)
-	var msg = string(writer.Bytes())
-	var expected = fmt.Sprintf(
+	msg := string(writer.Bytes())
+	expected := fmt.Sprintf(
 		requestSuccessLogTemplate,
 		req.URL.Path,
 		req.Method,
@@ -61,19 +60,19 @@ func TestLogger_LogRequestSuccess(t *testing.T) {
 
 func TestLogger_LogRequestError(t *testing.T) {
 	var writer bytes.Buffer
-	var logger = getLogger(&writer)
-	var req, _ = http.NewRequest(
+	logger := getLogger(&writer)
+	req, _ := http.NewRequest(
 		method,
 		url,
 		nil,
 	)
 
-	var errorMsg = "Msg"
-	var err = errors.New(errorMsg)
+	errorMsg := "msg"
+	err := fmt.Errorf(errorMsg)
 
 	logger.LogRequestError(req, err)
-	var msg = string(writer.Bytes())
-	var expected = fmt.Sprintf(
+	msg := string(writer.Bytes())
+	expected := fmt.Sprintf(
 		requestErrorTemplate,
 		req.URL.Path,
 		err.Error(),
@@ -85,7 +84,7 @@ func TestLogger_LogRequestError(t *testing.T) {
 }
 
 func getLogger(writer io.Writer) *Logger {
-	var format = logging.MustStringFormatter(
+	format := logging.MustStringFormatter(
 		`%{message}`,
 	)
 	backend := logging.NewLogBackend(writer, "", 0)
@@ -94,7 +93,7 @@ func getLogger(writer io.Writer) *Logger {
 	backendLeveled := logging.AddModuleLevel(backendFormatter)
 	backendLeveled.SetLevel(logging.INFO, "")
 
-	var logger = logging.MustGetLogger("main")
+	logger := logging.MustGetLogger("main")
 
 	logger.SetBackend(backendLeveled)
 

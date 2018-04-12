@@ -7,10 +7,9 @@ import (
 	"os"
 )
 
-func ReadConf(r io.Reader) (Conf, error) {
-	var conf = Conf{}
-
-	var parseErr = json.NewDecoder(r).Decode(&conf)
+func ReadConf(r io.Reader) (*Conf, error) {
+	conf := &Conf{}
+	parseErr := json.NewDecoder(r).Decode(&conf)
 	return conf, parseErr
 }
 

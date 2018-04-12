@@ -4,13 +4,12 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/Sovianum/acquaintance-server/config"
-	"github.com/Sovianum/acquaintance-server/dao"
-	"github.com/Sovianum/acquaintance-server/model"
-	"github.com/Sovianum/acquaintance-server/mylog"
-	"github.com/stretchr/testify/assert"
+	"github.com/Sovianum/arquest-server/config"
+	"github.com/Sovianum/arquest-server/dao"
+	"github.com/Sovianum/arquest-server/model"
+	"github.com/Sovianum/arquest-server/mylog"
+	"github.com/stretchr/testify/suite"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
 	"io"
 	"io/ioutil"
@@ -31,559 +30,31 @@ type headerPair struct {
 	value string
 }
 
-func TestEnv_UserRegisterPost_Success(t *testing.T) {
-	var db, mock, dbErr = sqlmock.New()
+func getEnv(db *sql.DB) *Env {
+	return &Env{
+		userDAO: dao.NewDBUserDAO(db),
+		conf:    getAuthConf(),
+		hashFunc: func(password []byte) ([]byte, error) {
+			var h = sha256.New()
+			h.Write(password)
+			return h.Sum(nil), nil
+		},
+		hashValidator: func(password []byte, hash []byte) error {
+			var h = sha256.New()
+			h.Write(password)
+			var passHash = h.Sum(nil)
 
-	if dbErr != nil {
-		t.Fatal(dbErr)
-	}
-	defer db.Close()
-
-	var user = &model.User{
-		Login:    "login",
-		Password: "password",
-		About:    "about",
-		Sex:      model.MALE,
-		Age:      100,
-	}
-
-	var env = getEnv(db)
-	var hash, _ = env.hashFunc([]byte(user.Password))
-
-	// mock exists
-	mock.
-		ExpectQuery("SELECT count").
-		WithArgs(user.Login).
-		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(0))
-
-	// mock user insertion
-	mock.
-		ExpectExec("INSERT INTO Users").
-		WithArgs(user.Login, string(hash), user.Age, user.Sex, user.About).
-		WillReturnResult(sqlmock.NewResult(1, 1))
-
-	// mock id selection
-	mock.
-		ExpectQuery("SELECT id FROM").
-		WithArgs(user.Login).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-
-	var requestMsg, jsonErr = json.Marshal(user)
-	assert.Nil(t, jsonErr)
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserRegisterPost,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusOK, rec.Code)
-}
-
-func TestEnv_UserRegisterPost_ParseFail(t *testing.T) {
-
-	var env = &Env{
-		conf:   getAuthConf(),
+			if string(passHash) != string(hash) {
+				return fmt.Errorf("hashes %s, %s do not match", string(passHash), string(hash))
+			}
+			return nil
+		},
 		logger: mylog.NewLogger(ioutil.Discard),
 	}
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserRegisterPost,
-		strings.NewReader("Invalid json"),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
-func TestEnv_UserRegisterPost_CheckFail(t *testing.T) {
-	var db, mock, dbErr = sqlmock.New()
-
-	if dbErr != nil {
-		t.Fatal(dbErr)
-	}
-	defer db.Close()
-
-	var user = &model.User{
-		Login:    "login",
-		Password: "password",
-		About:    "about",
-		Sex:      model.MALE,
-		Age:      100,
-	}
-
-	// mock exists
-	mock.
-		ExpectQuery("SELECT count").
-		WithArgs(user.Login).
-		WillReturnError(errors.New("db fail"))
-
-	var env = getEnv(db)
-
-	var requestMsg, jsonErr = json.Marshal(user)
-	assert.Nil(t, jsonErr)
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserRegisterPost,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-}
-
-func TestEnv_UserRegisterPost_Conflict(t *testing.T) {
-	var db, mock, dbErr = sqlmock.New()
-
-	if dbErr != nil {
-		t.Fatal(dbErr)
-	}
-	defer db.Close()
-
-	var user = &model.User{
-		Login:    "login",
-		Password: "password",
-		About:    "about",
-		Sex:      model.MALE,
-		Age:      100,
-	}
-
-	// mock exists
-	mock.
-		ExpectQuery("SELECT count").
-		WithArgs(user.Login).
-		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
-
-	var env = getEnv(db)
-
-	var requestMsg, jsonErr = json.Marshal(user)
-	assert.Nil(t, jsonErr)
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserRegisterPost,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusConflict, rec.Code)
-}
-
-func TestEnv_UserRegisterPost_SaveErr(t *testing.T) {
-	var db, mock, dbErr = sqlmock.New()
-
-	if dbErr != nil {
-		t.Fatal(dbErr)
-	}
-	defer db.Close()
-
-	var user = &model.User{
-		Login:    "login",
-		Password: "password",
-		About:    "about",
-		Sex:      model.MALE,
-		Age:      100,
-	}
-
-	var env = getEnv(db)
-
-	var hash, _ = env.hashFunc([]byte(user.Password))
-
-	// mock exists
-	mock.
-		ExpectQuery("SELECT count").
-		WithArgs(user.Login).
-		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(0))
-
-	// mock user insertion
-	mock.
-		ExpectExec("INSERT INTO Users").
-		WithArgs(user.Login, hash, user.Age, user.Sex, user.About).
-		WillReturnError(errors.New("db fail"))
-
-	// mock id selection
-	mock.
-		ExpectQuery("SELECT id FROM").
-		WithArgs(user.Login).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-
-	var requestMsg, jsonErr = json.Marshal(user)
-	assert.Nil(t, jsonErr)
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserRegisterPost,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-}
-
-func TestEnv_UserRegisterPost_IdExtraction(t *testing.T) {
-	var db, mock, dbErr = sqlmock.New()
-
-	if dbErr != nil {
-		t.Fatal(dbErr)
-	}
-	defer db.Close()
-
-	var user = &model.User{
-		Login:    "login",
-		Password: "password",
-		About:    "about",
-		Sex:      model.MALE,
-		Age:      100,
-	}
-
-	var env = getEnv(db)
-
-	var hash, _ = env.hashFunc([]byte(user.Password))
-
-	// mock exists
-	mock.
-		ExpectQuery("SELECT count").
-		WithArgs(user.Login).
-		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(0))
-
-	// mock user insertion
-	mock.
-		ExpectExec("INSERT INTO Users").
-		WithArgs(user.Login, hash, user.Age, user.Sex, user.About).
-		WillReturnResult(sqlmock.NewResult(1, 1))
-
-	// mock id selection
-	mock.
-		ExpectQuery("SELECT id FROM").
-		WithArgs(user.Login).
-		WillReturnError(errors.New("db fail"))
-
-	var requestMsg, jsonErr = json.Marshal(user)
-	assert.Nil(t, jsonErr)
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserRegisterPost,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-}
-
-func TestEnv_UserRegisterPost_NoLogin(t *testing.T) {
-	var user = &model.User{
-		Password: "password",
-		About:    "about",
-		Sex:      model.MALE,
-		Age:      100,
-	}
-
-	var env = &Env{
-		conf:   getAuthConf(),
-		logger: mylog.NewLogger(ioutil.Discard),
-	}
-
-	var requestMsg, jsonErr = json.Marshal(user)
-	assert.Nil(t, jsonErr)
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserRegisterPost,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-}
-
-func TestEnv_UserRegisterPost_NoPassword(t *testing.T) {
-	var user = &model.User{
-		Login: "login",
-		About: "about",
-		Sex:   model.MALE,
-		Age:   100,
-	}
-
-	var env = &Env{
-		conf:   getAuthConf(),
-		logger: mylog.NewLogger(ioutil.Discard),
-	}
-
-	var requestMsg, jsonErr = json.Marshal(user)
-	assert.Nil(t, jsonErr)
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserRegisterPost,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-}
-
-func TestEnv_UserSignInPost_Success(t *testing.T) {
-	var db, mock, dbErr = sqlmock.New()
-
-	if dbErr != nil {
-		t.Fatal(dbErr)
-	}
-	defer db.Close()
-
-	var user = &model.User{
-		Login:    "login",
-		Password: "password",
-		About:    "about",
-		Sex:      model.MALE,
-		Age:      100,
-	}
-
-	var env = getEnv(db)
-
-	// mock exists
-	mock.
-		ExpectQuery("SELECT count").
-		WithArgs(user.Login).
-		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
-
-	// mock user extraction
-	var hash, _ = env.hashFunc([]byte(user.Password))
-	mock.
-		ExpectQuery("SELECT id").
-		WithArgs(user.Login).
-		WillReturnRows(
-			sqlmock.NewRows(
-				[]string{"id", "login", "password", "age", "sex", "about"}).
-				AddRow(1, "login", hash, 100, model.MALE, "about"),
-		)
-
-	var requestMsg, jsonErr = json.Marshal(user)
-	assert.Nil(t, jsonErr)
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserSignInPost,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusOK, rec.Code)
-}
-
-func TestEnv_UserSignInPost_WrongPassword(t *testing.T) {
-	var db, mock, dbErr = sqlmock.New()
-
-	if dbErr != nil {
-		t.Fatal(dbErr)
-	}
-	defer db.Close()
-
-	var user = &model.User{
-		Login:    "login",
-		Password: "password",
-		About:    "about",
-		Sex:      model.MALE,
-		Age:      100,
-	}
-
-	// mock exists
-	mock.
-		ExpectQuery("SELECT count").
-		WithArgs(user.Login).
-		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
-
-	// mock user extraction
-	mock.
-		ExpectQuery("SELECT id").
-		WithArgs(user.Login).
-		WillReturnRows(
-			sqlmock.NewRows(
-				[]string{"id", "login", "password", "age", "sex", "about"}).
-				AddRow(1, "login", "pass", 100, model.MALE, "about"),
-		)
-
-	var env = getEnv(db)
-
-	var requestMsg, jsonErr = json.Marshal(user)
-	assert.Nil(t, jsonErr)
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserSignInPost,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusNotFound, rec.Code)
-}
-
-func TestEnv_UserSignInPost_ParseError(t *testing.T) {
-	var env = &Env{
-		conf:   getAuthConf(),
-		logger: mylog.NewLogger(ioutil.Discard),
-	}
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserSignInPost,
-		strings.NewReader("Invalid json"),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-}
-
-func TestEnv_UserSignInPost_CheckDBFail(t *testing.T) {
-	var db, mock, dbErr = sqlmock.New()
-
-	if dbErr != nil {
-		t.Fatal(dbErr)
-	}
-	defer db.Close()
-
-	var user = &model.User{
-		Login:    "login",
-		Password: "password",
-		About:    "about",
-		Sex:      model.MALE,
-		Age:      100,
-	}
-
-	// mock exists
-	mock.
-		ExpectQuery("SELECT count").
-		WithArgs(user.Login).
-		WillReturnError(errors.New("db fail"))
-
-	var env = getEnv(db)
-
-	var requestMsg, jsonErr = json.Marshal(user)
-	assert.Nil(t, jsonErr)
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserSignInPost,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-}
-
-func TestEnv_UserSignInPost_NotFound(t *testing.T) {
-	var db, mock, dbErr = sqlmock.New()
-
-	if dbErr != nil {
-		t.Fatal(dbErr)
-	}
-	defer db.Close()
-
-	var user = &model.User{
-		Login:    "login",
-		Password: "password",
-		About:    "about",
-		Sex:      model.MALE,
-		Age:      100,
-	}
-
-	// mock exists
-	mock.
-		ExpectQuery("SELECT count").
-		WithArgs(user.Login).
-		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(0))
-
-	var env = getEnv(db)
-
-	var requestMsg, jsonErr = json.Marshal(user)
-	assert.Nil(t, jsonErr)
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserSignInPost,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusNotFound, rec.Code)
-}
-
-func TestEnv_UserSignInPost_IdExtractionFail(t *testing.T) {
-	var db, mock, dbErr = sqlmock.New()
-
-	if dbErr != nil {
-		t.Fatal(dbErr)
-	}
-	defer db.Close()
-
-	var user = &model.User{
-		Login:    "login",
-		Password: "password",
-		About:    "about",
-		Sex:      model.MALE,
-		Age:      100,
-	}
-
-	// mock exists
-	mock.
-		ExpectQuery("SELECT count").
-		WithArgs(user.Login).
-		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
-
-	// mock id selection
-	mock.
-		ExpectQuery("SELECT id FROM").
-		WithArgs(user.Login).
-		WillReturnError(errors.New("db fail"))
-
-	var env = getEnv(db)
-
-	var requestMsg, jsonErr = json.Marshal(user)
-	assert.Nil(t, jsonErr)
-
-	var rec, recErr = getRecorder(
-		urlSample,
-		http.MethodPost,
-		env.UserSignInPost,
-		strings.NewReader(string(requestMsg)),
-		headerPair{"Content-Type", "application/json"},
-	)
-
-	assert.Nil(t, recErr)
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-}
-
-func getAuthConf() config.Conf {
-	return config.Conf{
+func getAuthConf() *config.Conf {
+	return &config.Conf{
 		Auth: config.AuthConfig{
 			ExpireDays: expireDays,
 			TokenKey:   tokenKey,
@@ -619,25 +90,376 @@ func getRecorder(
 	return rec, nil
 }
 
-func getEnv(db *sql.DB) *Env {
-	return &Env{
-		userDAO: dao.NewDBUserDAO(db),
-		conf:    getAuthConf(),
-		hashFunc: func(password []byte) ([]byte, error) {
-			var h = sha256.New()
-			h.Write(password)
-			return h.Sum(nil), nil
-		},
-		hashValidator: func(password []byte, hash []byte) error {
-			var h = sha256.New()
-			h.Write(password)
-			var passHash = h.Sum(nil)
+type AuthTestSuite struct {
+	suite.Suite
+	user *model.User
+	hash []byte
+	db   *sql.DB
+	env  *Env
+	mock sqlmock.Sqlmock
+}
 
-			if string(passHash) != string(hash) {
-				return fmt.Errorf("hashes %s, %s do not match", string(passHash), string(hash))
-			}
-			return nil
-		},
-		logger: mylog.NewLogger(ioutil.Discard),
+func (s *AuthTestSuite) SetupTest() {
+	s.user = &model.User{
+		Login:    "login",
+		Password: "password",
+		About:    "about",
+		Sex:      model.MALE,
+		Age:      100,
 	}
+	var err error
+	s.db, s.mock, err = sqlmock.New()
+	s.Require().NoError(err)
+
+	s.env = getEnv(s.db)
+	s.hash, _ = s.env.hashFunc([]byte(s.user.Password))
+	s.env.logger = mylog.NewLogger(ioutil.Discard)
+}
+
+func (s *AuthTestSuite) TestRegisterSuccess() {
+	// mock exists
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(s.user.Login).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(0))
+
+	// mock user insertion
+	s.mock.
+		ExpectExec("INSERT INTO Users").
+		WithArgs(s.user.Login, string(s.hash), s.user.Age, s.user.Sex, s.user.About).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	// mock id selection
+	s.mock.
+		ExpectQuery("SELECT id FROM").
+		WithArgs(s.user.Login).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	requestMsg, jsonErr := json.Marshal(s.user)
+	s.Require().NoError(jsonErr)
+
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserRegisterPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+	s.Require().NoError(recErr)
+	s.Equal(http.StatusOK, rec.Code)
+}
+
+func (s *AuthTestSuite) TestRegisterParseFail() {
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserRegisterPost,
+		strings.NewReader("Invalid json"),
+		headerPair{"Content-Type", "application/json"},
+	)
+	s.Require().NoError(recErr)
+	s.Equal(http.StatusBadRequest, rec.Code)
+}
+
+func (s *AuthTestSuite) TestRegisterCheckFail() {
+	// mock exists
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(s.user.Login).
+		WillReturnError(fmt.Errorf("db fail"))
+
+	requestMsg, jsonErr := json.Marshal(s.user)
+	s.Require().Nil(jsonErr)
+
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserRegisterPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+	s.Require().NoError(recErr)
+	s.Equal(http.StatusInternalServerError, rec.Code)
+}
+
+func (s *AuthTestSuite) TestRegisterConflict() {
+	// mock exists
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(s.user.Login).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
+
+	requestMsg, jsonErr := json.Marshal(s.user)
+	s.NoError(jsonErr)
+
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserRegisterPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+	s.Require().NoError(recErr)
+	s.Equal(http.StatusConflict, rec.Code)
+}
+
+func (s *AuthTestSuite) TestRegisterSaveErr() {
+	// mock exists
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(s.user.Login).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(0))
+
+	// mock user insertion
+	s.mock.
+		ExpectExec("INSERT INTO Users").
+		WithArgs(s.user.Login, s.hash, s.user.Age, s.user.Sex, s.user.About).
+		WillReturnError(fmt.Errorf("db fail"))
+
+	// mock id selection
+	s.mock.
+		ExpectQuery("SELECT id FROM").
+		WithArgs(s.user.Login).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	requestMsg, jsonErr := json.Marshal(s.user)
+	s.Require().NoError(jsonErr)
+
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserRegisterPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+	s.Require().NoError(recErr)
+	s.Equal(http.StatusInternalServerError, rec.Code)
+}
+
+func (s *AuthTestSuite) TestRegisterIdExtractionErr() {
+	// mock exists
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(s.user.Login).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(0))
+
+	// mock user insertion
+	s.mock.
+		ExpectExec("INSERT INTO Users").
+		WithArgs(s.user.Login, s.hash, s.user.Age, s.user.Sex, s.user.About).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	// mock id selection
+	s.mock.
+		ExpectQuery("SELECT id FROM").
+		WithArgs(s.user.Login).
+		WillReturnError(fmt.Errorf("db fail"))
+
+	requestMsg, jsonErr := json.Marshal(s.user)
+	s.Require().NoError(jsonErr)
+
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserRegisterPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+	s.Require().NoError(recErr)
+	s.Equal(http.StatusInternalServerError, rec.Code)
+}
+
+func (s *AuthTestSuite) TestRegisterNoLogin() {
+	s.user = &model.User{
+		Password: "password",
+		About:    "about",
+		Sex:      model.MALE,
+		Age:      100,
+	}
+
+	requestMsg, jsonErr := json.Marshal(s.user)
+	s.Require().NoError(jsonErr)
+
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserRegisterPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+	s.Require().NoError(recErr)
+	s.Equal(http.StatusBadRequest, rec.Code)
+}
+
+func (s *AuthTestSuite) TestRegisterNoPassword() {
+	s.user = &model.User{
+		Login: "login",
+		About: "about",
+		Sex:   model.MALE,
+		Age:   100,
+	}
+
+	requestMsg, jsonErr := json.Marshal(s.user)
+	s.Require().NoError(jsonErr)
+
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserRegisterPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+
+	s.NoError(recErr)
+	s.Equal(http.StatusBadRequest, rec.Code)
+}
+
+func (s *AuthTestSuite) TestSignInSuccess() {
+	// mock exists
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(s.user.Login).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
+
+	// mock user extraction
+	s.mock.
+		ExpectQuery("SELECT id").
+		WithArgs(s.user.Login).
+		WillReturnRows(
+			sqlmock.NewRows(
+				[]string{"id", "login", "password", "age", "sex", "about"}).
+				AddRow(1, "login", s.hash, 100, model.MALE, "about"),
+		)
+
+	requestMsg, jsonErr := json.Marshal(s.user)
+	s.NoError(jsonErr)
+
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserSignInPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+	s.Require().NoError(recErr)
+	s.Equal(http.StatusOK, rec.Code)
+}
+
+func (s *AuthTestSuite) TestUserSignWrongPassword() {
+	// mock exists
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(s.user.Login).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
+
+	// mock user extraction
+	s.mock.
+		ExpectQuery("SELECT id").
+		WithArgs(s.user.Login).
+		WillReturnRows(
+			sqlmock.NewRows(
+				[]string{"id", "login", "password", "age", "sex", "about"}).
+				AddRow(1, "login", "pass", 100, model.MALE, "about"),
+		)
+
+	requestMsg, jsonErr := json.Marshal(s.user)
+	s.Require().NoError(jsonErr)
+
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserSignInPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+	s.NoError(recErr)
+	s.Equal(http.StatusNotFound, rec.Code)
+}
+
+func (s *AuthTestSuite) TestSignInParseError() {
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserSignInPost,
+		strings.NewReader("Invalid json"),
+		headerPair{"Content-Type", "application/json"},
+	)
+	s.Require().NoError(recErr)
+	s.Equal(http.StatusBadRequest, rec.Code)
+}
+
+func (s *AuthTestSuite) TestSignInDBFail() {
+	// mock exists
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(s.user.Login).
+		WillReturnError(fmt.Errorf("db fail"))
+
+	requestMsg, jsonErr := json.Marshal(s.user)
+	s.Require().NoError(jsonErr)
+
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserSignInPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+
+	s.Require().NoError(recErr)
+	s.Equal(http.StatusInternalServerError, rec.Code)
+}
+
+func (s *AuthTestSuite) TestSignInNotFound() {
+	// mock exists
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(s.user.Login).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(0))
+
+	requestMsg, jsonErr := json.Marshal(s.user)
+	s.Require().NoError(jsonErr)
+
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserSignInPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+
+	s.Require().NoError(recErr)
+	s.Equal(http.StatusNotFound, rec.Code)
+}
+
+func (s *AuthTestSuite) TestSignInIdExtractionFail() {
+	// mock exists
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(s.user.Login).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
+
+	// mock id selection
+	s.mock.
+		ExpectQuery("SELECT id FROM").
+		WithArgs(s.user.Login).
+		WillReturnError(fmt.Errorf("db fail"))
+
+	requestMsg, jsonErr := json.Marshal(s.user)
+	s.Require().NoError(jsonErr)
+
+	rec, recErr := getRecorder(
+		urlSample,
+		http.MethodPost,
+		s.env.UserSignInPost,
+		strings.NewReader(string(requestMsg)),
+		headerPair{"Content-Type", "application/json"},
+	)
+
+	s.Require().NoError(recErr)
+	s.Equal(http.StatusInternalServerError, rec.Code)
+}
+
+func TestAuthTestSuite(t *testing.T) {
+	suite.Run(t, new(AuthTestSuite))
 }

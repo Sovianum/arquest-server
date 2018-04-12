@@ -13,12 +13,5 @@
     "password": "go",
     "db_name": "acq",
     "auth_string_template": "user=%s password=%s dbname=%s sslmode=disable"
-  },
-  "logic": {
-    "distance": 100000000,
-    "online_timeout": 500000000,
-    "request_expiration": 500000000,
-    "cleanup_interval": 100000,
-    "poll_seconds": 1
   }
 }

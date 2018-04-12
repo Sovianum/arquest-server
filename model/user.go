@@ -26,7 +26,7 @@ type User struct {
 }
 
 func (user *User) UnmarshalJSON(data []byte) error {
-	var err = checkPresence(
+	err := checkPresence(
 		data,
 		[]string{"login"},
 		[]string{UserRequiredLogin},
@@ -36,7 +36,7 @@ func (user *User) UnmarshalJSON(data []byte) error {
 	}
 
 	type userAlias User
-	var dest = (*userAlias)(user)
+	dest := (*userAlias)(user)
 
 	err = json.Unmarshal(data, dest)
 	if err != nil {
@@ -49,7 +49,7 @@ func (user *User) UnmarshalJSON(data []byte) error {
 }
 
 func (user *User) Validate() error {
-	var msgList = make([]string, 0)
+	var msgList []string
 	if user.Sex != UNKNOWN && user.Sex != MALE && user.Sex != FEMALE {
 		msgList = append(msgList, RegistrationInvalidSex)
 	}

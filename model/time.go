@@ -23,8 +23,8 @@ func (t QuotedTime) MarshalJSON() ([]byte, error) {
 }
 
 func (t *QuotedTime) UnmarshalJSON(b []byte) error {
-	var inputS = string(b)
-	var ts, err = time.Parse(layout, inputS[1:len(inputS)-2]) // slicing removes quotes and timezone symbol
+	inputS := string(b)
+	ts, err := time.Parse(layout, inputS[1:len(inputS)-2]) // slicing removes quotes and timezone symbol
 
 	if err != nil {
 		return err

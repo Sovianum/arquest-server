@@ -12,19 +12,18 @@ const (
 	requestBodyTemplate       = "Request to url %v with method %v has body %v"
 	responseBodyTemplate      = "Request to url %v with method %v has response with body %v"
 	requestErrorTemplate      = `Failed on URL %v with error \"%v\"`
+	logFormat                 = `%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`
 )
 
 func NewLogger(writer io.Writer) *Logger {
-	var format = golog.MustStringFormatter(
-		`%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`,
-	)
+	format := golog.MustStringFormatter(logFormat)
 	backend := golog.NewLogBackend(writer, "", 0)
 	backendFormatter := golog.NewBackendFormatter(backend, format)
 
 	backendLeveled := golog.AddModuleLevel(backendFormatter)
 	backendLeveled.SetLevel(golog.INFO, "")
 
-	var logger = golog.MustGetLogger("main")
+	logger := golog.MustGetLogger("main")
 
 	logger.SetBackend(backendLeveled)
 

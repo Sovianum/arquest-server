@@ -2,9 +2,9 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
-	"github.com/Sovianum/acquaintance-server/common"
-	"github.com/Sovianum/acquaintance-server/model"
+	"fmt"
+	"github.com/Sovianum/arquest-server/common"
+	"github.com/Sovianum/arquest-server/model"
 	"github.com/dgrijalva/jwt-go"
 	"io/ioutil"
 	"net/http"
@@ -17,9 +17,11 @@ const (
 	expStr   = "exp"
 )
 
+var notFoundErr = fmt.Errorf("not found")
+
 func (env *Env) UserRegisterPost(w http.ResponseWriter, r *http.Request) {
 	env.logger.LogRequestStart(r)
-	var user, code, parseErr = parseUser(r)
+	u, code, parseErr := parseUser(r)
 	if parseErr != nil {
 		env.logger.LogRequestError(r, parseErr)
 		w.WriteHeader(code)
@@ -27,7 +29,7 @@ func (env *Env) UserRegisterPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var exists, existsErr = env.userDAO.ExistsByLogin(user.Login)
+	exists, existsErr := env.userDAO.ExistsByLogin(u.Login)
 	if existsErr != nil {
 		env.logger.LogRequestError(r, existsErr)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -35,23 +37,23 @@ func (env *Env) UserRegisterPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if exists {
-		var err = errors.New("user already exists")
+		err := fmt.Errorf("user already exists")
 		env.logger.LogRequestError(r, err)
 		w.WriteHeader(http.StatusConflict)
 		common.WriteWithLogging(r, w, common.GetErrorJson(err), env.logger)
 		return
 	}
 
-	var hash, err = env.hashFunc([]byte(user.Password))
+	hash, err := env.hashFunc([]byte(u.Password))
 	if err != nil {
 		env.logger.LogRequestError(r, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		common.WriteWithLogging(r, w, common.GetErrorJson(err), env.logger)
 		return
 	}
-	user.Password = string(hash)
+	u.Password = string(hash)
 
-	var userId, saveErr = env.userDAO.Save(user)
+	userId, saveErr := env.userDAO.Save(u)
 	if saveErr != nil {
 		env.logger.LogRequestError(r, saveErr)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -59,12 +61,12 @@ func (env *Env) UserRegisterPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var tokenString, tokenErr = env.generateTokenString(userId, user.Login)
+	tokenString, tokenErr := env.generateTokenString(userId, u.Login)
 	if tokenErr != nil {
 		env.logger.LogRequestError(r, tokenErr)
 		w.WriteHeader(http.StatusInternalServerError)
 		common.WriteWithLogging(r, w, common.GetErrorJson(tokenErr), env.logger)
-		// TODO add info that user has been successfully saved
+		// TODO add info that u has been successfully saved
 		return
 	}
 
@@ -74,7 +76,7 @@ func (env *Env) UserRegisterPost(w http.ResponseWriter, r *http.Request) {
 
 func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
 	env.logger.LogRequestStart(r)
-	var user, code, parseErr = parseUser(r)
+	u, code, parseErr := parseUser(r)
 	if parseErr != nil {
 		env.logger.LogRequestError(r, parseErr)
 		w.WriteHeader(code)
@@ -82,7 +84,7 @@ func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var exists, existsErr = env.userDAO.ExistsByLogin(user.Login)
+	exists, existsErr := env.userDAO.ExistsByLogin(u.Login)
 	if existsErr != nil {
 		env.logger.LogRequestError(r, existsErr)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -90,14 +92,13 @@ func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		var err = errors.New("not found")
-		env.logger.LogRequestError(r, err)
+		env.logger.LogRequestError(r, notFoundErr)
 		w.WriteHeader(http.StatusNotFound)
-		common.WriteWithLogging(r, w, common.GetErrorJson(err), env.logger)
+		common.WriteWithLogging(r, w, common.GetErrorJson(notFoundErr), env.logger)
 		return
 	}
 
-	var dbUser, dbErr = env.userDAO.GetUserByLogin(user.Login)
+	dbUser, dbErr := env.userDAO.GetUserByLogin(u.Login)
 	if dbErr != nil {
 		env.logger.LogRequestError(r, dbErr)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -105,19 +106,19 @@ func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := env.hashValidator([]byte(user.Password), []byte(dbUser.Password)); err != nil {
+	if err := env.hashValidator([]byte(u.Password), []byte(dbUser.Password)); err != nil {
 		env.logger.LogRequestError(r, err)
 		w.WriteHeader(http.StatusNotFound)
 		common.WriteWithLogging(r, w, common.GetErrorJson(err), env.logger)
 		return
 	}
 
-	var tokenString, tokenErr = env.generateTokenString(dbUser.Id, dbUser.Login)
+	tokenString, tokenErr := env.generateTokenString(dbUser.Id, dbUser.Login)
 	if tokenErr != nil {
 		env.logger.LogRequestError(r, tokenErr)
 		w.WriteHeader(http.StatusInternalServerError)
 		common.WriteWithLogging(r, w, common.GetErrorJson(tokenErr), env.logger)
-		// TODO add info that user has been successfully saved
+		// TODO add info that u has been successfully saved
 		return
 	}
 
@@ -127,7 +128,7 @@ func (env *Env) UserSignInPost(w http.ResponseWriter, r *http.Request) {
 
 func (env *Env) UserGetSelfInfo(w http.ResponseWriter, r *http.Request) {
 	env.logger.LogRequestStart(r)
-	var userId, idCode, idErr = env.getIdFromRequest(r)
+	userId, idCode, idErr := env.getIdFromRequest(r)
 	if idErr != nil {
 		env.logger.LogRequestError(r, idErr)
 		w.WriteHeader(idCode)
@@ -135,7 +136,7 @@ func (env *Env) UserGetSelfInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var exists, existsErr = env.userDAO.ExistsById(userId)
+	exists, existsErr := env.userDAO.ExistsById(userId)
 	if existsErr != nil {
 		env.logger.LogRequestError(r, existsErr)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -143,10 +144,9 @@ func (env *Env) UserGetSelfInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		var err = errors.New("not found")
-		env.logger.LogRequestError(r, err)
+		env.logger.LogRequestError(r, notFoundErr)
 		w.WriteHeader(http.StatusNotFound)
-		common.WriteWithLogging(r, w, common.GetErrorJson(err), env.logger)
+		common.WriteWithLogging(r, w, common.GetErrorJson(notFoundErr), env.logger)
 		return
 	}
 
@@ -163,15 +163,15 @@ func (env *Env) UserGetSelfInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (env *Env) generateTokenString(id int, login string) (string, error) {
-	var token = jwt.New(jwt.SigningMethodHS256)
-	var claims = token.Claims.(jwt.MapClaims)
+	t := jwt.New(jwt.SigningMethodHS256)
+	claims := t.Claims.(jwt.MapClaims)
 
 	claims[idStr] = id
 	claims[loginStr] = login
 	claims[expStr] = time.Now().Add(time.Hour * 24 * time.Duration(env.conf.Auth.ExpireDays)).Unix()
 
 	var tokenKey = env.conf.Auth.GetTokenKey()
-	return token.SignedString(tokenKey)
+	return t.SignedString(tokenKey)
 }
 
 func parseUser(r *http.Request) (*model.User, int, error) {
@@ -184,14 +184,14 @@ func parseUser(r *http.Request) (*model.User, int, error) {
 		return nil, http.StatusInternalServerError, err
 	}
 
-	var user = new(model.User)
-	if err := json.Unmarshal(body, &user); err != nil {
+	var u = new(model.User)
+	if err := json.Unmarshal(body, &u); err != nil {
 		return nil, http.StatusBadRequest, err
 	}
 
-	if user.Login == "" || user.Password == "" {
-		return nil, http.StatusBadRequest, errors.New("Empty user")
+	if u.Login == "" || u.Password == "" {
+		return nil, http.StatusBadRequest, fmt.Errorf("empty user")
 	}
 
-	return user, http.StatusOK, nil
+	return u, http.StatusOK, nil
 }

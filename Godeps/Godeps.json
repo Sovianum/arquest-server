@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/Sovianum/acquaintance-server",
+	"ImportPath": "github.com/Sovianum/arquest-server",
 	"GoVersion": "go1.9",
 	"GodepVersion": "v79",
 	"Packages": [
