@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Sovianum/arquest-server/config"
 	"github.com/Sovianum/arquest-server/mylog"
+	"github.com/Sovianum/arquest-server/routes"
 	"github.com/Sovianum/arquest-server/server"
 	"github.com/gorilla/handlers"
 	_ "github.com/lib/pq"
@@ -33,7 +34,7 @@ func main() {
 	}
 
 	env := server.NewEnv(db, conf, logger)
-	router := server.GetEngine(env)
+	router := routes.GetEngine(env)
 
 	portLine := fmt.Sprintf(":%d", getServerPort(conf, logger))
 	http.ListenAndServe(portLine, handlers.LoggingHandler(os.Stdout, router))

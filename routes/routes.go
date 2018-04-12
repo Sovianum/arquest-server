@@ -1,10 +1,11 @@
-package server
+package routes
 
 import (
+	"github.com/Sovianum/arquest-server/server"
 	"github.com/gin-gonic/gin"
 )
 
-func GetEngine(env *Env) *gin.Engine {
+func GetEngine(env *server.Env) *gin.Engine {
 	router := gin.Default()
 
 	root := router.Group("/api/v1/")
