@@ -23,8 +23,10 @@ type tokenKeyGetterType func() string
 
 func NewEnv(db *sql.DB, conf *config.Conf, logger *mylog.Logger) *Env {
 	env := &Env{
-		userDAO: dao.NewDBUserDAO(db),
-		conf:    conf,
+		userDAO:  dao.NewDBUserDAO(db),
+		questDAO: dao.NewQuestDAO(db),
+		voteDAO:  dao.NewVoteDAO(db),
+		conf:     conf,
 		meetRequestCache: cache.New(
 			time.Second*time.Duration(conf.Logic.RequestExpiration),
 			time.Second*time.Duration(conf.Logic.CleanupInterval),
@@ -51,6 +53,8 @@ func NewEnv(db *sql.DB, conf *config.Conf, logger *mylog.Logger) *Env {
 
 type Env struct {
 	userDAO          dao.UserDAO
+	questDAO         dao.QuestDAO
+	voteDAO          dao.VoteDAO
 	conf             *config.Conf
 	hashFunc         func(password []byte) ([]byte, error)
 	hashValidator    func(password []byte, hash []byte) error

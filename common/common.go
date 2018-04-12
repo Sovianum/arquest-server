@@ -1,14 +1,5 @@
 package common
 
-import (
-	"encoding/json"
-)
-
-type ResponseMsg struct {
-	ErrMsg interface{} `json:"err_msg,omitempty"`
-	Data   interface{} `json:"data,omitempty"`
-}
-
 func Round(f float64) int {
 	floor := int(f)
 	ceil := floor + 1
@@ -23,12 +14,19 @@ func Round(f float64) int {
 	return result
 }
 
-func GetErrorJson(err error) []byte {
-	msg, _ := json.Marshal(ResponseMsg{ErrMsg: err.Error()})
-	return msg
+type ResponseMsg struct {
+	ErrMsg interface{} `json:"err_msg,omitempty"`
+	Data   interface{} `json:"data,omitempty"`
 }
 
-func GetDataJson(data interface{}) []byte {
-	msg, _ := json.Marshal(ResponseMsg{Data: data})
-	return msg
+func GetErrResponse(err error) ResponseMsg {
+	return ResponseMsg{ErrMsg: err.Error()}
+}
+
+func GetDataResponse(data interface{}) ResponseMsg {
+	return ResponseMsg{Data: data}
+}
+
+func GetEmptyResponse() ResponseMsg {
+	return ResponseMsg{}
 }

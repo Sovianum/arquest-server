@@ -9,14 +9,23 @@ func GetEngine(env *server.Env) *gin.Engine {
 	router := gin.Default()
 
 	root := router.Group("/api/v1/")
+	root.GET("quests", env.GetAllQuests)
 
-	auth := root.Group("auth")
-	auth.POST("register", env.UserRegisterPost)
-	auth.POST("login", env.UserSignInPost)
+	authGroup := root.Group("auth")
+	authGroup.POST("register", env.UserRegisterPost)
+	authGroup.POST("login", env.UserSignInPost)
 
-	authorized := root.Group("user")
-	authorized.Use(env.CheckAuthorization)
+	userGroup := root.Group("user")
+	userGroup.Use(env.CheckAuthorization)
+	userGroup.GET("/", env.UserGetSelfInfo)
 
-	authorized.GET("self", env.UserGetSelfInfo)
+	questGroup := userGroup.Group("quest")
+	questGroup.GET("finished", env.GetFinishedQuests)
+
+	voteGroup := userGroup.Group("vote")
+	voteGroup.GET("all", env.GetUserVotes)
+	voteGroup.POST("mark", env.MarkQuest)
+	voteGroup.POST("finish", env.FinishQuest)
+
 	return router
 }
