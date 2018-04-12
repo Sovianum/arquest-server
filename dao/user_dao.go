@@ -6,12 +6,12 @@ import (
 )
 
 const (
-	saveUser         = `INSERT INTO Users (login, password, age, sex, about) VALUES ($1, $2, $3, $4, $5)`
-	getUserById      = `SELECT id, login, password, age, sex, about FROM Users WHERE id = $1`
-	getUserByLogin   = `SELECT id, login, password, age, sex, about FROM Users WHERE login = $1`
-	getIdByLogin     = `SELECT id FROM Users WHERE login = $1`
-	checkUserById    = `SELECT count(*) cnt FROM Users u WHERE u.id = $1`
-	checkUserByLogin = `SELECT count(*) cnt FROM Users u WHERE u.login = $1`
+	saveUser         = `INSERT INTO users (login, password, age, sex, about) VALUES ($1, $2, $3, $4, $5)`
+	getUserById      = `SELECT id, login, password, age, sex, about FROM users WHERE id = $1`
+	getUserByLogin   = `SELECT id, login, password, age, sex, about FROM users WHERE login = $1`
+	getIdByLogin     = `SELECT id FROM users WHERE login = $1`
+	checkUserById    = `SELECT count(*) cnt FROM users u WHERE u.id = $1`
+	checkUserByLogin = `SELECT count(*) cnt FROM users u WHERE u.login = $1`
 )
 
 type UserDAO interface {
@@ -58,7 +58,6 @@ func (dao *dbUserDAO) GetUserById(id int) (*model.User, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return u, nil
 }
 
@@ -68,7 +67,6 @@ func (dao *dbUserDAO) GetUserByLogin(login string) (*model.User, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return u, nil
 }
 
@@ -77,7 +75,6 @@ func (dao *dbUserDAO) ExistsById(id int) (bool, error) {
 	if err := dao.db.QueryRow(checkUserById, id).Scan(&cnt); err != nil {
 		return false, err
 	}
-
 	return cnt > 0, nil
 }
 
@@ -86,7 +83,6 @@ func (dao *dbUserDAO) ExistsByLogin(login string) (bool, error) {
 	if err := dao.db.QueryRow(checkUserByLogin, login).Scan(&cnt); err != nil {
 		return false, err
 	}
-
 	return cnt > 0, nil
 }
 

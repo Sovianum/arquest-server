@@ -125,7 +125,7 @@ func (s *AuthTestSuite) TestRegisterSuccess() {
 
 	// mock user insertion
 	s.mock.
-		ExpectExec("INSERT INTO Users").
+		ExpectExec("INSERT INTO users").
 		WithArgs(s.user.Login, string(s.hash), s.user.Age, s.user.Sex, s.user.About).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 

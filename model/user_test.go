@@ -3,7 +3,6 @@ package model
 import (
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
-	"os/user"
 	"testing"
 )
 
