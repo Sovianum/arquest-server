@@ -100,37 +100,6 @@ func (env *Env) UserSignInPost(c *gin.Context) {
 	c.JSON(http.StatusOK, common.GetDataJson(tokenString))
 }
 
-func (env *Env) UserGetSelfInfo(c *gin.Context) {
-	var user model.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, common.GetErrorJson(err))
-		return
-	}
-
-	userId, idCode, idErr := env.getIdFromRequest(c.Request)
-	if idErr != nil {
-		c.JSON(idCode, common.GetErrorJson(idErr))
-		return
-	}
-
-	exists, existsErr := env.userDAO.ExistsById(userId)
-	if existsErr != nil {
-		c.JSON(http.StatusInternalServerError, common.GetErrorJson(existsErr))
-		return
-	}
-	if !exists {
-		c.JSON(http.StatusNotFound, common.GetErrorJson(notFoundErr))
-		return
-	}
-
-	var dbUser, dbErr = env.userDAO.GetUserById(userId)
-	if dbErr != nil {
-		c.JSON(http.StatusInternalServerError, common.GetErrorJson(dbErr))
-		return
-	}
-	c.JSON(http.StatusOK, common.GetDataJson(dbUser))
-}
-
 func (env *Env) generateTokenString(id int, login string) (string, error) {
 	t := jwt.New(jwt.SigningMethodHS256)
 	claims := t.Claims.(jwt.MapClaims)

@@ -7,9 +7,15 @@ import (
 func GetEngine(env *Env) *gin.Engine {
 	router := gin.Default()
 
-	router.POST("/api/v1/auth/register", env.UserRegisterPost)
-	router.POST("/api/v1/auth/login", env.UserSignInPost)
-	router.GET("/api/v1/user/self", env.UserGetSelfInfo)
+	root := router.Group("/api/v1/")
 
+	auth := root.Group("auth")
+	auth.POST("register", env.UserRegisterPost)
+	auth.POST("login", env.UserSignInPost)
+
+	authorized := root.Group("user")
+	authorized.Use(env.CheckAuthorization)
+
+	authorized.GET("self", env.UserGetSelfInfo)
 	return router
 }
