@@ -135,7 +135,7 @@ func (s *MarkTestSuite) TestFinishOk() {
 	questID := 2
 
 	s.mock.
-		ExpectExec("UPDATE quest_user_link SET finished = TRUE").
+		ExpectExec("INSERT INTO quest_user_link").
 		WithArgs(userID, questID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -148,7 +148,7 @@ func (s *MarkTestSuite) TestFinishError() {
 	questID := 2
 
 	s.mock.
-		ExpectExec("UPDATE quest_user_link SET finished = TRUE").
+		ExpectExec("INSERT INTO quest_user_link").
 		WithArgs(userID, questID).
 		WillReturnError(fmt.Errorf("fail"))
 

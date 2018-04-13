@@ -26,6 +26,7 @@ func (env *Env) UserRegisterPost(c *gin.Context) {
 	}
 	if code, err := validateUser(&user); err != nil {
 		c.JSON(code, common.GetErrResponse(err))
+		return
 	}
 
 	exists, existsErr := env.userDAO.ExistsByLogin(user.Login)
@@ -113,8 +114,11 @@ func (env *Env) generateTokenString(id int, login string) (string, error) {
 }
 
 func validateUser(user *model.User) (int, error) {
-	if user.Login == "" || user.Password == "" {
-		return http.StatusBadRequest, fmt.Errorf("empty user")
+	if user.Login == "" {
+		return http.StatusBadRequest, fmt.Errorf("no login")
+	}
+	if user.Password == "" {
+		return http.StatusBadRequest, fmt.Errorf("no password")
 	}
 	return http.StatusOK, nil
 }

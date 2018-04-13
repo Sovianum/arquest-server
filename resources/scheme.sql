@@ -1,4 +1,6 @@
 DROP TABLE IF EXISTS Users CASCADE;
+DROP TABLE IF EXISTS quest CASCADE;
+DROP TABLE IF EXISTS quest_user_link CASCADE;
 
 DROP TYPE IF EXISTS SEX;
 
@@ -25,9 +27,9 @@ CREATE TABLE quest_user_link (
   id SERIAL PRIMARY KEY ,
   user_id INT REFERENCES Users(id),
   quest_id INT REFERENCES Quest(id),
-  started BOOLEAN,
-  completed BOOLEAN,
-  marked BOOLEAN,
-  mark FLOAT,
-  UNIQUE (user_id, quest_id)
+  started BOOLEAN DEFAULT TRUE ,
+  completed BOOLEAN DEFAULT FALSE ,
+  marked BOOLEAN DEFAULT FALSE ,
+  mark FLOAT DEFAULT 0,
+  CONSTRAINT ux_user_id_quest_id UNIQUE (user_id, quest_id)
 );

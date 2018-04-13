@@ -43,6 +43,7 @@ func (s *MarkTestSuite) SetupTest() {
 
 	s.env = getEnv(s.db)
 	s.env.markDAO = dao.NewMarkDAO(s.db)
+	s.env.questDAO = dao.NewQuestDAO(s.db)
 	s.env.logger = mylog.NewLogger(ioutil.Discard)
 	gin.SetMode(gin.ReleaseMode)
 
@@ -54,7 +55,11 @@ func (s *MarkTestSuite) SetupTest() {
 func (s *MarkTestSuite) TestFinishQuestSuccess() {
 	mark := model.Mark{UserID: 20, QuestID: 2}
 	s.mock.
-		ExpectExec("UPDATE quest_user_link SET finished = TRUE").
+		ExpectQuery("SELECT count").
+		WithArgs(mark.QuestID).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
+	s.mock.
+		ExpectExec("INSERT INTO quest_user_link").
 		WithArgs(mark.UserID, mark.QuestID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -74,6 +79,10 @@ func (s *MarkTestSuite) TestFinishQuestSuccess() {
 
 func (s *MarkTestSuite) TestFinishQuestForbidden() {
 	mark := model.Mark{UserID: 1, QuestID: 2}
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(mark.QuestID).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
 	s.mock.
 		ExpectExec("UPDATE quest_user_link SET finished = TRUE").
 		WithArgs(mark.UserID, mark.QuestID).
@@ -96,6 +105,10 @@ func (s *MarkTestSuite) TestFinishQuestForbidden() {
 func (s *MarkTestSuite) TestFinishQuestError() {
 	mark := model.Mark{UserID: 20, QuestID: 2}
 	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(mark.QuestID).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
+	s.mock.
 		ExpectExec("UPDATE quest_user_link SET finished = TRUE").
 		WithArgs(mark.UserID, mark.QuestID).
 		WillReturnError(fmt.Errorf("fail"))
@@ -110,6 +123,10 @@ func (s *MarkTestSuite) TestFinishQuestError() {
 
 func (s *MarkTestSuite) TestMarkQuestSuccess() {
 	mark := model.Mark{UserID: 20, QuestID: 2, Mark: 4}
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(mark.QuestID).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
 	s.mock.
 		ExpectExec("UPDATE quest_user_link SET mark").
 		WithArgs(mark.Mark, mark.UserID, mark.QuestID).
@@ -137,6 +154,10 @@ func (s *MarkTestSuite) TestMarkQuestSuccess() {
 func (s *MarkTestSuite) TestMarkQuestForbidden() {
 	mark := model.Mark{UserID: 1, QuestID: 2, Mark: 4}
 	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(mark.QuestID).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
+	s.mock.
 		ExpectExec("UPDATE quest_user_link SET mark").
 		WithArgs(mark.Mark, mark.UserID, mark.QuestID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
@@ -156,6 +177,10 @@ func (s *MarkTestSuite) TestMarkQuestForbidden() {
 
 func (s *MarkTestSuite) TestMarkQuestMarkErr() {
 	mark := model.Mark{UserID: 20, QuestID: 2, Mark: 4}
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(mark.QuestID).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
 	s.mock.
 		ExpectExec("UPDATE quest_user_link SET mark").
 		WithArgs(mark.Mark, mark.UserID, mark.QuestID).
@@ -183,6 +208,10 @@ func (s *MarkTestSuite) TestMarkQuestMarkErr() {
 
 func (s *MarkTestSuite) TestMarkQuestRatingErr() {
 	mark := model.Mark{UserID: 20, QuestID: 2, Mark: 4}
+	s.mock.
+		ExpectQuery("SELECT count").
+		WithArgs(mark.QuestID).
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(1))
 	s.mock.
 		ExpectExec("UPDATE quest_user_link SET mark").
 		WithArgs(mark.Mark, mark.UserID, mark.QuestID).

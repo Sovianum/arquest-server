@@ -22,7 +22,7 @@ func GetEngine(env *server.Env) *gin.Engine {
 	questGroup := userGroup.Group("quest")
 	questGroup.GET("finished", env.GetFinishedQuests)
 
-	voteGroup := userGroup.Group("vote")
+	voteGroup := userGroup.Group("mark")
 	voteGroup.GET("all", env.GetUserVotes)
 	voteGroup.POST("mark", env.MarkQuest)
 	voteGroup.POST("finish", env.FinishQuest)

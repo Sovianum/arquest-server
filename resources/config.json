@@ -6,12 +6,12 @@
     "expire_days": 100
   },
   "db": {
-    "port": 8080,
+    "port": 5432,
     "driver_name": "postgres",
     "env_var": "DATABASE_URL",
-    "user": "go_user",
-    "password": "go",
-    "db_name": "acq",
+    "user": "artem",
+    "password": "artem",
+    "db_name": "quest_db",
     "auth_string_template": "user=%s password=%s dbname=%s sslmode=disable"
   }
 }

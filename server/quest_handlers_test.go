@@ -118,7 +118,7 @@ func (s *QuestTestSuite) TestAllQuestsError() {
 func (s *QuestTestSuite) TestFinishedQuestsSuccess() {
 	s.c.Set(UserID, s.user.Id)
 	s.mock.
-		ExpectQuery("SELECT q.id id, q.name name, q.description").
+		ExpectQuery("SELECT q.id AS id, q.name AS name, q.description").
 		WithArgs(s.user.Id).
 		WillReturnRows(
 			sqlmock.NewRows([]string{"id", "name", "description", "rating"}).
@@ -147,7 +147,7 @@ func (s *QuestTestSuite) TestFinishedQuestsSuccess() {
 func (s *QuestTestSuite) TestFinishedQuestsEmpty() {
 	s.c.Set(UserID, s.user.Id)
 	s.mock.
-		ExpectQuery("SELECT q.id id, q.name name, q.description").
+		ExpectQuery("SELECT q.id AS id, q.name AS name, q.description").
 		WithArgs(s.user.Id).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "description", "rating"}))
 	s.env.GetFinishedQuests(s.c)
