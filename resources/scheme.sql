@@ -17,7 +17,8 @@ CREATE TABLE quest (
   id SERIAL PRIMARY KEY,
   name VARCHAR(50),
   description VARCHAR(1000),
-  rating FLOAT
+  rating FLOAT,
+  mark_count INT
 );
 
 CREATE TABLE quest_user_link (

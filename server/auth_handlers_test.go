@@ -70,12 +70,9 @@ func getRecorder(
 	body io.Reader,
 	headers ...headerPair,
 ) (*httptest.ResponseRecorder, error) {
-	req, err := http.NewRequest(method, url, body)
+	req, err := getRequest(url, method, body, headers...)
 	if err != nil {
 		return nil, err
-	}
-	for _, hp := range headers {
-		req.Header.Set(hp.key, hp.value)
 	}
 	rec := httptest.NewRecorder()
 
@@ -85,7 +82,18 @@ func getRecorder(
 	return rec, nil
 }
 
-type AuthTestSuite struct {
+func getRequest(url, method string, body io.Reader, headers ...headerPair) (*http.Request, error) {
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, err
+	}
+	for _, hp := range headers {
+		req.Header.Set(hp.key, hp.value)
+	}
+	return req, nil
+}
+
+type AuthHandlersTestSuite struct {
 	suite.Suite
 	user *model.User
 	hash []byte
@@ -94,7 +102,7 @@ type AuthTestSuite struct {
 	mock sqlmock.Sqlmock
 }
 
-func (s *AuthTestSuite) SetupTest() {
+func (s *AuthHandlersTestSuite) SetupTest() {
 	s.user = &model.User{
 		Login:    "login",
 		Password: "password",
@@ -112,7 +120,7 @@ func (s *AuthTestSuite) SetupTest() {
 	gin.SetMode(gin.ReleaseMode)
 }
 
-func (s *AuthTestSuite) TestRegisterSuccess() {
+func (s *AuthHandlersTestSuite) TestRegisterSuccess() {
 	// mock exists
 	s.mock.
 		ExpectQuery("SELECT count").
@@ -145,7 +153,7 @@ func (s *AuthTestSuite) TestRegisterSuccess() {
 	s.Equal(http.StatusOK, rec.Code)
 }
 
-func (s *AuthTestSuite) TestRegisterParseFail() {
+func (s *AuthHandlersTestSuite) TestRegisterParseFail() {
 	rec, recErr := getRecorder(
 		urlSample,
 		http.MethodPost,
@@ -157,7 +165,7 @@ func (s *AuthTestSuite) TestRegisterParseFail() {
 	s.Equal(http.StatusBadRequest, rec.Code)
 }
 
-func (s *AuthTestSuite) TestRegisterCheckFail() {
+func (s *AuthHandlersTestSuite) TestRegisterCheckFail() {
 	// mock exists
 	s.mock.
 		ExpectQuery("SELECT count").
@@ -178,7 +186,7 @@ func (s *AuthTestSuite) TestRegisterCheckFail() {
 	s.Equal(http.StatusInternalServerError, rec.Code)
 }
 
-func (s *AuthTestSuite) TestRegisterConflict() {
+func (s *AuthHandlersTestSuite) TestRegisterConflict() {
 	// mock exists
 	s.mock.
 		ExpectQuery("SELECT count").
@@ -199,7 +207,7 @@ func (s *AuthTestSuite) TestRegisterConflict() {
 	s.Equal(http.StatusConflict, rec.Code)
 }
 
-func (s *AuthTestSuite) TestRegisterSaveErr() {
+func (s *AuthHandlersTestSuite) TestRegisterSaveErr() {
 	// mock exists
 	s.mock.
 		ExpectQuery("SELECT count").
@@ -232,7 +240,7 @@ func (s *AuthTestSuite) TestRegisterSaveErr() {
 	s.Equal(http.StatusInternalServerError, rec.Code)
 }
 
-func (s *AuthTestSuite) TestRegisterIdExtractionErr() {
+func (s *AuthHandlersTestSuite) TestRegisterIdExtractionErr() {
 	// mock exists
 	s.mock.
 		ExpectQuery("SELECT count").
@@ -265,7 +273,7 @@ func (s *AuthTestSuite) TestRegisterIdExtractionErr() {
 	s.Equal(http.StatusInternalServerError, rec.Code)
 }
 
-func (s *AuthTestSuite) TestRegisterNoLogin() {
+func (s *AuthHandlersTestSuite) TestRegisterNoLogin() {
 	s.user = &model.User{
 		Password: "password",
 		About:    "about",
@@ -287,7 +295,7 @@ func (s *AuthTestSuite) TestRegisterNoLogin() {
 	s.Equal(http.StatusBadRequest, rec.Code)
 }
 
-func (s *AuthTestSuite) TestRegisterNoPassword() {
+func (s *AuthHandlersTestSuite) TestRegisterNoPassword() {
 	s.user = &model.User{
 		Login: "login",
 		About: "about",
@@ -310,7 +318,7 @@ func (s *AuthTestSuite) TestRegisterNoPassword() {
 	s.Equal(http.StatusBadRequest, rec.Code)
 }
 
-func (s *AuthTestSuite) TestSignInSuccess() {
+func (s *AuthHandlersTestSuite) TestSignInSuccess() {
 	// mock exists
 	s.mock.
 		ExpectQuery("SELECT count").
@@ -341,7 +349,7 @@ func (s *AuthTestSuite) TestSignInSuccess() {
 	s.Equal(http.StatusOK, rec.Code)
 }
 
-func (s *AuthTestSuite) TestUserSignWrongPassword() {
+func (s *AuthHandlersTestSuite) TestUserSignWrongPassword() {
 	// mock exists
 	s.mock.
 		ExpectQuery("SELECT count").
@@ -372,7 +380,7 @@ func (s *AuthTestSuite) TestUserSignWrongPassword() {
 	s.Equal(http.StatusNotFound, rec.Code)
 }
 
-func (s *AuthTestSuite) TestSignInParseError() {
+func (s *AuthHandlersTestSuite) TestSignInParseError() {
 	rec, recErr := getRecorder(
 		urlSample,
 		http.MethodPost,
@@ -384,7 +392,7 @@ func (s *AuthTestSuite) TestSignInParseError() {
 	s.Equal(http.StatusBadRequest, rec.Code)
 }
 
-func (s *AuthTestSuite) TestSignInDBFail() {
+func (s *AuthHandlersTestSuite) TestSignInDBFail() {
 	// mock exists
 	s.mock.
 		ExpectQuery("SELECT count").
@@ -406,7 +414,7 @@ func (s *AuthTestSuite) TestSignInDBFail() {
 	s.Equal(http.StatusInternalServerError, rec.Code)
 }
 
-func (s *AuthTestSuite) TestSignInNotFound() {
+func (s *AuthHandlersTestSuite) TestSignInNotFound() {
 	// mock exists
 	s.mock.
 		ExpectQuery("SELECT count").
@@ -428,7 +436,7 @@ func (s *AuthTestSuite) TestSignInNotFound() {
 	s.Equal(http.StatusNotFound, rec.Code)
 }
 
-func (s *AuthTestSuite) TestSignInIdExtractionFail() {
+func (s *AuthHandlersTestSuite) TestSignInIdExtractionFail() {
 	// mock exists
 	s.mock.
 		ExpectQuery("SELECT count").
@@ -456,6 +464,6 @@ func (s *AuthTestSuite) TestSignInIdExtractionFail() {
 	s.Equal(http.StatusInternalServerError, rec.Code)
 }
 
-func TestAuthTestSuite(t *testing.T) {
-	suite.Run(t, new(AuthTestSuite))
+func TestAuthHandlersTestSuite(t *testing.T) {
+	suite.Run(t, new(AuthHandlersTestSuite))
 }

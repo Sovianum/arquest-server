@@ -22,5 +22,5 @@ func (env *Env) GetFinishedQuests(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, common.GetErrResponse(err))
 		return
 	}
-	c.JSON(http.StatusOK, quests)
+	c.JSON(http.StatusOK, common.GetDataResponse(quests))
 }

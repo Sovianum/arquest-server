@@ -6,12 +6,12 @@ import (
 )
 
 const (
-	getAllQuests     = `SELECT id, name, description, rating FROM Quest`
+	getAllQuests     = `SELECT id, name, description, rating FROM quest`
 	getFinishedQuest = `
-		SELECT q.id, q.name, q.description, q.rating 
+		SELECT q.id id, q.name name, q.description description, q.rating rating
 		FROM 
-			Quest q 
-			JOIN QuestUserLink link ON q.id = link.quest_id 
+			quest q 
+			JOIN quest_user_link link ON q.id = link.quest_id 
 		WHERE link.user_id = $1 link.finished
 	`
 )
@@ -44,7 +44,7 @@ func (dao *dbQuestDAO) getQuests(sql string, args ...interface{}) ([]model.Quest
 	}
 	defer rows.Close()
 
-	var result []model.Quest
+	result := make([]model.Quest, 0)
 	for rows.Next() {
 		quest := model.Quest{}
 		err = rows.Scan(
