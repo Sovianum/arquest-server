@@ -34,7 +34,7 @@ func (env *Env) GetUserMarks(c *gin.Context) {
 func (env *Env) updateLinkTable(c *gin.Context, updateFunc func(vote model.Mark) dao.DBError) {
 	id := c.GetInt(UserID)
 	var vote model.Mark
-	if err := c.ShouldBindJSON(&vote); err != nil {
+	if err := c.BindJSON(&vote); err != nil {
 		c.JSON(http.StatusBadRequest, common.GetErrResponse(err))
 		return
 	}

@@ -15,4 +15,5 @@ type Flags struct {
 
 func (f *Flags) Parse() {
 	flag.StringVar(&f.Config, "c", f.defaultConfig, "path to config file")
+	flag.Parse()
 }

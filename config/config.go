@@ -28,6 +28,7 @@ type AuthConfig struct {
 }
 
 type DBConfig struct {
+	Host               string `json:"host"`
 	Port               int    `json:"port"`
 	EnvVar             string `json:"env_var"`
 	DriverName         string `json:"driver_name"`
@@ -46,7 +47,7 @@ func (conf AuthConfig) GetTokenKey() []byte {
 }
 
 func (conf DBConfig) GetAuthStr() string {
-	return fmt.Sprintf(conf.AuthStringTemplate, conf.User, conf.Password, conf.DBName)
+	return fmt.Sprintf(conf.AuthStringTemplate, conf.Host, conf.Port, conf.User, conf.Password, conf.DBName)
 }
 
 func (conf DBConfig) GetEnvAuthString() string {

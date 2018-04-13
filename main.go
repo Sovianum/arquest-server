@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	confFile   = "resources/config.json"
+	confFile   = "resources/ard.conf.json"
 	defaultLog = "/var/log/ard.log"
 )
 
@@ -68,13 +68,11 @@ func getLogger(conf *config.Conf) (*mylog.Logger, *os.File, error) {
 	var f *os.File
 	if err != nil {
 		if os.IsNotExist(err) {
-			var innerErr error
-			f, innerErr = os.Create(conf.Log)
-			if innerErr != nil {
-				return nil, nil, innerErr
+			f, err = os.Create(conf.Log)
+			if err != nil {
+				return nil, nil, err
 			}
 		}
-		return nil, nil, err
 	} else {
 		var innerErr error
 		f, innerErr = os.OpenFile(conf.Log, os.O_APPEND|os.O_WRONLY, 0600)
@@ -107,7 +105,9 @@ func connectDB(conf *config.Conf, logger *mylog.Logger) (*sql.DB, error) {
 		logger.Info("Authorized via env")
 		return db, nil
 	}
-	if db, err = sql.Open(conf.DB.DriverName, conf.DB.GetAuthStr()); err != nil {
+	authStr := conf.DB.GetAuthStr()
+	fmt.Printf("connecting to db via %s\n", authStr)
+	if db, err = sql.Open(conf.DB.DriverName, authStr); err != nil {
 		return nil, err
 	}
 	if err = db.Ping(); err != nil {

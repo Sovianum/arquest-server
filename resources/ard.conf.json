@@ -1,0 +1,22 @@
+{
+  "port_env_var": "PORT",
+  "default_port": 3000,
+  "log": "/tmp/ard.log",
+  "auth": {
+    "token_key": "token90",
+    "expire_days": 100
+  },
+  "db": {
+    "host": "outer_host",
+    "port": 5432,
+    "driver_name": "postgres",
+    "env_var": "DATABASE_URL",
+    "user": "artem",
+    "password": "artem",
+    "db_name": "quest_db",
+    "auth_string_template": "host=%s port=%d user=%s password=%s dbname=%s sslmode=disable"
+  },
+  "logic": {
+    "quest_data_template": "/data/quests/%d"
+  }
+}

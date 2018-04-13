@@ -20,7 +20,7 @@ var notFoundErr = fmt.Errorf("not found")
 
 func (env *Env) UserRegisterPost(c *gin.Context) {
 	var user model.User
-	if err := c.ShouldBindJSON(&user); err != nil {
+	if err := c.BindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, common.GetErrResponse(err))
 		return
 	}
@@ -63,7 +63,7 @@ func (env *Env) UserRegisterPost(c *gin.Context) {
 
 func (env *Env) UserSignInPost(c *gin.Context) {
 	var user model.User
-	if err := c.ShouldBindJSON(&user); err != nil {
+	if err := c.BindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, common.GetErrResponse(err))
 		return
 	}
