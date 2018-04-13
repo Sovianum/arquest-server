@@ -5,4 +5,5 @@ type Quest struct {
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
 	Rating      float32 `json:"rating"`
+	DataPath    string  `json:"data_path,omitempty"`
 }

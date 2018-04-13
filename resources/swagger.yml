@@ -507,6 +507,10 @@ definitions:
         type: number
         description: Рейтинг квеста
         example: 3.5
+      data_path:
+        type: string
+        description: URL до архива с ресурсам квеста
+        example: /data/quests/1
 
   Mark:
     type: object

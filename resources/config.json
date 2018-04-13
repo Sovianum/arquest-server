@@ -13,5 +13,8 @@
     "password": "artem",
     "db_name": "quest_db",
     "auth_string_template": "user=%s password=%s dbname=%s sslmode=disable"
+  },
+  "logic": {
+    "quest_data_template": "/data/quests/%d"
   }
 }

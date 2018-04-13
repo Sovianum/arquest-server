@@ -9,10 +9,8 @@ import (
 	"github.com/Sovianum/arquest-server/dao"
 	"github.com/Sovianum/arquest-server/mylog"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/patrickmn/go-cache"
 	"net/http"
 	"strings"
-	"time"
 )
 
 const (
@@ -27,10 +25,6 @@ func NewEnv(db *sql.DB, conf *config.Conf, logger *mylog.Logger) *Env {
 		questDAO: dao.NewQuestDAO(db),
 		markDAO:  dao.NewMarkDAO(db),
 		conf:     conf,
-		meetRequestCache: cache.New(
-			time.Second*time.Duration(conf.Logic.RequestExpiration),
-			time.Second*time.Duration(conf.Logic.CleanupInterval),
-		),
 		hashFunc: func(password []byte) ([]byte, error) {
 			var h = sha256.New()
 			h.Write(password)
@@ -52,14 +46,13 @@ func NewEnv(db *sql.DB, conf *config.Conf, logger *mylog.Logger) *Env {
 }
 
 type Env struct {
-	userDAO          dao.UserDAO
-	questDAO         dao.QuestDAO
-	markDAO          dao.MarkDAO
-	conf             *config.Conf
-	hashFunc         func(password []byte) ([]byte, error)
-	hashValidator    func(password []byte, hash []byte) error
-	meetRequestCache *cache.Cache
-	logger           *mylog.Logger
+	userDAO       dao.UserDAO
+	questDAO      dao.QuestDAO
+	markDAO       dao.MarkDAO
+	conf          *config.Conf
+	hashFunc      func(password []byte) ([]byte, error)
+	hashValidator func(password []byte, hash []byte) error
+	logger        *mylog.Logger
 }
 
 // TODO use some standard mechanisms instead of bicycles

@@ -37,11 +37,7 @@ type DBConfig struct {
 }
 
 type LogicConfig struct {
-	Distance          float64 `json:"distance"`
-	OnlineTimeout     int     `json:"online_timeout"`
-	RequestExpiration int     `json:"request_expiration"`
-	CleanupInterval   int     `json:"cleanup_interval"`
-	PollSeconds       int     `json:"poll_seconds"`
+	QuestDataTemplate string `json:"quest_data_template"`
 }
 
 func (conf AuthConfig) GetTokenKey() []byte {
