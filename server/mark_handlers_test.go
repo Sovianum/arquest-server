@@ -133,8 +133,8 @@ func (s *MarkTestSuite) TestMarkQuestSuccess() {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	s.mock.
-		ExpectExec("UPDATE quest SET rating = mark_count").
-		WithArgs(mark.Mark, mark.QuestID).
+		ExpectExec("UPDATE quest SET").
+		WithArgs(mark.QuestID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	msg, err := json.Marshal(mark)
@@ -218,8 +218,8 @@ func (s *MarkTestSuite) TestMarkQuestRatingErr() {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	s.mock.
-		ExpectExec("UPDATE quest SET rating = mark_count").
-		WithArgs(mark.Mark, mark.QuestID).
+		ExpectExec("UPDATE quest SET").
+		WithArgs(mark.QuestID).
 		WillReturnError(fmt.Errorf("rating err"))
 
 	msg, err := json.Marshal(mark)

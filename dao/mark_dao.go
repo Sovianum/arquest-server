@@ -14,7 +14,7 @@ const (
 		UPDATE quest_user_link SET mark = $1, marked = TRUE WHERE user_id = $2 AND quest_id = $3
 	`
 	updateRating = `
-		UPDATE quest SET rating = mark_count / (mark_count + 1) * rating + $1 / (mark_count + 1), mark_count = $1 / (mark_count + 1) WHERE id = $2
+		UPDATE quest SET (rating, mark_count) = (SELECT sum(mark) / count(*) AS rating, count(*) AS mark_count FROM quest_user_link) WHERE id = $1
 	`
 	finishQuest = `
 		INSERT INTO quest_user_link (user_id, quest_id, completed) VALUES ($1, $2, TRUE) ON CONFLICT ON CONSTRAINT ux_user_id_quest_id DO UPDATE SET completed = TRUE 
@@ -50,7 +50,7 @@ func (dao *dbMarkDAO) MarkQuest(userID, questID int, mark float32) DBError {
 		return rErr
 	}
 
-	if r, err := dao.db.Exec(updateRating, mark, questID); err != nil {
+	if r, err := dao.db.Exec(updateRating, questID); err != nil {
 		return NewCrashDBErr(err)
 	} else if rErr := getResultErr(r); rErr != nil {
 		return rErr
