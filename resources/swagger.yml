@@ -3,10 +3,255 @@ swagger: '2.0'
 # This is your document metadata
 info:
   version: "0.1.0"
-  title: API сервера знакомств
+  title: API сервера квеста
 
 # Describe your paths here
 paths:
+  /api/v1/quests:
+    get:
+      summary:
+        Получить информацию о квестах
+      responses:
+        200:
+          description:
+            Данные успешно получены
+          schema:
+            type: object
+            description: ответ с квестами
+            example:
+              {
+                data: [$ref: '#/definitions/Quest']
+              }
+        500:
+          description:
+            Ошибка сервера
+          schema:
+            type: object
+            description: ответ с описанием ошибки
+          examples:
+            {
+              err_msg: сервер упал
+            }
+
+  /api/v1/user/mark/all:
+    get:
+      summary:
+        Получить список оценок пользователя
+      parameters:
+        - name: id
+          in: token
+          type: integer
+          required: true
+      responses:
+        200:
+          description:
+            Оценки успешно получены
+          schema:
+            type: object
+            description: ответ с оценками пользователя
+            example:
+              {
+                data: [$ref: '#/definitions/Mark']
+              }
+        401:
+          description:
+            Пользователь не авторизован
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: пользователь на авторизован
+              }
+        403:
+          description:
+            Пользователь пытается голосовать за другого пользователя
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: вы не можете голосовать за другого
+              }
+        404:
+          description:
+            Пользователь из токена не найден в базе
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: что-то не найдено
+              }
+        400:
+          description:
+            Невалидный токен
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: инвалидный токен
+              }
+        500:
+          description:
+            ошибка на сервере
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: сервер упал
+              }
+
+  /api/v1/user/mark/mark:
+    post:
+      summary:
+        Оценить квест
+      parameters:
+        - name: id
+          in: token
+          required: true
+        - name: mark
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/Mark'
+
+      responses:
+        200:
+          description:
+            Квест успешно оценен
+          schema:
+            type: object
+            description: пустой ответ
+            example:
+              {}
+        401:
+          description:
+            Пользователь не авторизован
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: пользователь на авторизован
+              }
+        403:
+          description:
+            Пользователь пытается голосовать за другого пользователя
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: вы не можете голосовать за другого
+              }
+        404:
+          description:
+            Пользователь из токена не найден в базе
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: что-то не найдено
+              }
+        400:
+          description:
+            Невалидный токен
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: инвалидный токен
+              }
+        500:
+          description:
+            ошибка на сервере
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: сервер упал
+              }
+
+  /api/v1/user/mark/finish:
+    post:
+      summary:
+        Завершить квест
+      parameters:
+        - name: id
+          in: token
+          required: true
+        - name: mark
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/Mark'
+
+      responses:
+        200:
+          description:
+            Квест успешно завершен
+          schema:
+            type: object
+            description: пустой ответ
+            example:
+              {}
+        401:
+          description:
+            Пользователь не авторизован
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: пользователь на авторизован
+              }
+        403:
+          description:
+            Пользователь пытается голосовать за другого пользователя
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: вы не можете голосовать за другого
+              }
+        404:
+          description:
+            Пользователь из токена не найден в базе
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: что-то не найдено
+              }
+        400:
+          description:
+            Невалидный токен
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: инвалидный токен
+              }
+        500:
+          description:
+            ошибка на сервере
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: сервер упал
+              }
+
   /api/v1/auth/register:
     post:
       summary:
@@ -114,46 +359,106 @@ paths:
               }
 
   /api/v1/user/self:
-      get:
-        summary:
-          Получить информацию о самом себе
-        parameters:
-          - name: Authorization
-            in: header
-            description: авторизационный токен
-            required: true
-            type: string
-        responses:
-          200:
-            description:
-              данные успешно получены
-            schema:
-              type: object
-              description: информация о себе
-              example:
-                {
-                  "data": $ref: '#/definitions/User'
-                }
-          400:
-            description:
-              проблема с авторизационным токеном
-            schema:
-              type: object
-              description: ответ с ошибкой
-              example:
-                {
-                  err_msg: плохой запрос
-                }
-          500:
-            description:
-              ошибка на сервере
-            schema:
-              type: object
-              description: ответ с ошибкой
-              example:
-                {
-                  err_msg: сервер упал
-                }
+    get:
+      summary:
+        Получить информацию о самом себе
+      parameters:
+        - name: Authorization
+          in: header
+          description: авторизационный токен
+          required: true
+          type: string
+      responses:
+        200:
+          description:
+            данные успешно получены
+          schema:
+            type: object
+            description: информация о себе
+            example:
+              {
+                "data": {$ref: '#/definitions/User'}
+              }
+        400:
+          description:
+            проблема с авторизационным токеном
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: плохой запрос
+              }
+        500:
+          description:
+            ошибка на сервере
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: сервер упал
+              }
+
+  /api/v1/user/quest/finished:
+    get:
+      summary:
+        Получить список завершенных квестов
+      parameters:
+        - name: id
+          in: token
+          required: true
+      responses:
+        200:
+          description:
+            Квесты успешно получены
+          schema:
+            type: object
+            description: ответ с оценками пользователя
+            example:
+              {
+                data: [$ref: '#/definitions/Quest']
+              }
+        401:
+          description:
+            Пользователь не авторизован
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: пользователь на авторизован
+              }
+        404:
+          description:
+            Пользователь из токена не найден в базе
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: что-то не найдено
+              }
+        400:
+          description:
+            Невалидный токен
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: инвалидный токен
+              }
+        500:
+          description:
+            ошибка на сервере
+          schema:
+            type: object
+            description: ответ с ошибкой
+            example:
+              {
+                err_msg: сервер упал
+              }
 
 definitions:
   User:
@@ -180,5 +485,43 @@ definitions:
         description: Все, что пользователь хочет сообщить о себе
         example: Мне нечего сказать о себе
     required:
-    - login
-    - password
+      - login
+      - password
+
+  Quest:
+    type: object
+    properties:
+      id:
+        type: integer
+        description: id квеста
+        example: 100
+      name:
+        type: string
+        description: Название квеста
+        example: Путь в никуда
+      description:
+        type: string
+        description: Описание квеста
+        example: По пути туда вы не попадете никуда
+      rating:
+        type: number
+        description: Рейтинг квеста
+        example: 3.5
+
+  Mark:
+    type: object
+    properties:
+      user_id:
+        type: integer
+        description: Идентификатор пользователя (если не выставлен, берется из токена)
+        example: 100
+      quest_id:
+        type: integer
+        description: Идентификатор квеста
+        example: 200
+      mark:
+        type: number
+        description: Оценка пользователя
+        example: 3.5
+    required:
+      - quest_id

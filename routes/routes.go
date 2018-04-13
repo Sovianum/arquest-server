@@ -17,13 +17,13 @@ func GetEngine(env *server.Env) *gin.Engine {
 
 	userGroup := root.Group("user")
 	userGroup.Use(env.CheckAuthorization)
-	userGroup.GET("/", env.UserGetSelfInfo)
+	userGroup.GET("self", env.UserGetSelfInfo)
 
 	questGroup := userGroup.Group("quest")
 	questGroup.GET("finished", env.GetFinishedQuests)
 
 	voteGroup := userGroup.Group("mark")
-	voteGroup.GET("all", env.GetUserVotes)
+	voteGroup.GET("all", env.GetUserMarks)
 	voteGroup.POST("mark", env.MarkQuest)
 	voteGroup.POST("finish", env.FinishQuest)
 

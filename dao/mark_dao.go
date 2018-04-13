@@ -8,7 +8,7 @@ import (
 
 const (
 	getUserVotes = `
-		SELECT user_id, quest_id, vote FROM QuestUserLink
+		SELECT user_id, quest_id, mark FROM quest_user_link WHERE user_id = $1
 	`
 	markQuest = `
 		UPDATE quest_user_link SET mark = $1, marked = TRUE WHERE user_id = $2 AND quest_id = $3

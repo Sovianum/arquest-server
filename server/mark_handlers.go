@@ -21,7 +21,7 @@ func (env *Env) MarkQuest(c *gin.Context) {
 	})
 }
 
-func (env *Env) GetUserVotes(c *gin.Context) {
+func (env *Env) GetUserMarks(c *gin.Context) {
 	id := c.GetInt(UserID)
 	votes, err := env.markDAO.GetUserMarks(id)
 	if err != nil {
