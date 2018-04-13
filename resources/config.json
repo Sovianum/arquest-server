@@ -1,6 +1,7 @@
 {
   "port_env_var": "PORT",
   "default_port": 3000,
+  "log": "build/ard.log",
   "auth": {
     "token_key": "token90",
     "expire_days": 100

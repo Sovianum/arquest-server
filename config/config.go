@@ -14,6 +14,7 @@ func ReadConf(r io.Reader) (*Conf, error) {
 }
 
 type Conf struct {
+	Log         string      `json:"log"`
 	PortEnvVar  string      `json:"port_env_var"`
 	DefaultPort int         `json:"default_port"`
 	Auth        AuthConfig  `json:"auth"`

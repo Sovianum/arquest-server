@@ -7,25 +7,45 @@ import (
 	"github.com/Sovianum/arquest-server/mylog"
 	"github.com/Sovianum/arquest-server/routes"
 	"github.com/Sovianum/arquest-server/server"
+	"github.com/Sovianum/arquest-server/utils"
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/handlers"
 	_ "github.com/lib/pq"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
 )
 
 const (
-	confFile = "resources/config.json"
+	confFile   = "resources/config.json"
+	defaultLog = "/var/log/ard.log"
 )
 
 func main() {
-	logger := mylog.NewLogger(os.Stdout)
+	flags := utils.NewFlags(confFile)
+	flags.Parse()
 
-	conf, err := getConf()
+	fmt.Printf("ARD started.\nConfig from %s\n", flags.Config)
+
+	conf, err := getConf(flags)
 	if err != nil {
-		logger.Error(err)
 		panic(err)
 	}
+
+	if conf.Log == "" {
+		conf.Log = defaultLog
+	}
+
+	fmt.Printf("Logging to %s\n", conf.Log)
+
+	logger, f, err := getLogger(conf)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	gin.DefaultWriter = io.MultiWriter(f)
 
 	db, err := connectDB(conf, logger)
 	if err != nil {
@@ -37,7 +57,32 @@ func main() {
 	router := routes.GetEngine(env)
 
 	portLine := fmt.Sprintf(":%d", getServerPort(conf, logger))
-	http.ListenAndServe(portLine, handlers.LoggingHandler(os.Stdout, router))
+	if err := http.ListenAndServe(portLine, handlers.LoggingHandler(os.Stdout, router)); err != nil {
+		panic(err)
+	}
+}
+
+func getLogger(conf *config.Conf) (*mylog.Logger, *os.File, error) {
+	_, err := os.Stat(conf.Log)
+
+	var f *os.File
+	if err != nil {
+		if os.IsNotExist(err) {
+			var innerErr error
+			f, innerErr = os.Create(conf.Log)
+			if innerErr != nil {
+				return nil, nil, innerErr
+			}
+		}
+		return nil, nil, err
+	} else {
+		var innerErr error
+		f, innerErr = os.OpenFile(conf.Log, os.O_APPEND|os.O_WRONLY, 0600)
+		if innerErr != nil {
+			return nil, nil, innerErr
+		}
+	}
+	return mylog.NewLogger(f), f, nil
 }
 
 func getServerPort(conf *config.Conf, logger *mylog.Logger) int {
@@ -72,8 +117,8 @@ func connectDB(conf *config.Conf, logger *mylog.Logger) (*sql.DB, error) {
 	return db, err
 }
 
-func getConf() (*config.Conf, error) {
-	file, confErr := os.Open(confFile)
+func getConf(flags *utils.Flags) (*config.Conf, error) {
+	file, confErr := os.Open(flags.Config)
 	if confErr != nil {
 		return nil, confErr
 	}
