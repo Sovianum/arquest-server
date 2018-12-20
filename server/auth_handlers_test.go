@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Sovianum/arquest-server/config"
-	"github.com/Sovianum/arquest-server/dao"
+	"github.com/Sovianum/arquest-server/sqldao"
 	"github.com/Sovianum/arquest-server/model"
 	"github.com/Sovianum/arquest-server/mylog"
 	"github.com/gin-gonic/gin"
@@ -33,7 +33,7 @@ type headerPair struct {
 
 func getEnv(db *sql.DB) *Env {
 	return &Env{
-		userDAO: dao.NewDBUserDAO(db),
+		userDAO: sqldao.NewDBUserDAO(db),
 		conf:    getAuthConf(),
 		hashFunc: func(password []byte) ([]byte, error) {
 			var h = sha256.New()

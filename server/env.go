@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Sovianum/arquest-server/common"
 	"github.com/Sovianum/arquest-server/config"
+	"github.com/Sovianum/arquest-server/sqldao"
 	"github.com/Sovianum/arquest-server/dao"
 	"github.com/Sovianum/arquest-server/mylog"
 	"github.com/dgrijalva/jwt-go"
@@ -19,11 +20,11 @@ const (
 
 type tokenKeyGetterType func() string
 
-func NewEnv(db *sql.DB, conf *config.Conf, logger *mylog.Logger) *Env {
+func NewSQLEnv(db *sql.DB, conf *config.Conf, logger *mylog.Logger) *Env {
 	env := &Env{
-		userDAO:  dao.NewDBUserDAO(db),
-		questDAO: dao.NewQuestDAO(db),
-		markDAO:  dao.NewMarkDAO(db),
+		userDAO:  sqldao.NewDBUserDAO(db),
+		questDAO: sqldao.NewQuestDAO(db),
+		markDAO:  sqldao.NewMarkDAO(db),
 		conf:     conf,
 		hashFunc: func(password []byte) ([]byte, error) {
 			var h = sha256.New()

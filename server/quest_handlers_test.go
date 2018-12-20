@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Sovianum/arquest-server/common"
-	"github.com/Sovianum/arquest-server/dao"
+	"github.com/Sovianum/arquest-server/sqldao"
 	"github.com/Sovianum/arquest-server/model"
 	"github.com/Sovianum/arquest-server/mylog"
 	"github.com/gin-gonic/gin"
@@ -41,7 +41,7 @@ func (s *QuestTestSuite) SetupTest() {
 	s.Require().NoError(err)
 
 	s.env = getEnv(s.db)
-	s.env.questDAO = dao.NewQuestDAO(s.db)
+	s.env.questDAO = sqldao.NewQuestDAO(s.db)
 	s.env.logger = mylog.NewLogger(ioutil.Discard)
 	gin.SetMode(gin.ReleaseMode)
 

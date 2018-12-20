@@ -53,7 +53,7 @@ func main() {
 		panic(err)
 	}
 
-	env := server.NewEnv(db, conf, logger)
+	env := server.NewSQLEnv(db, conf, logger)
 	router := routes.GetEngine(env)
 
 	portLine := fmt.Sprintf(":%d", getServerPort(conf, logger))

@@ -1,9 +1,10 @@
-package dao
+package sqldao
 
 import (
 	"database/sql"
 	"fmt"
 	"github.com/Sovianum/arquest-server/model"
+	"github.com/Sovianum/arquest-server/dao"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
 	"testing"
@@ -13,7 +14,7 @@ type QuestTestSuite struct {
 	suite.Suite
 	db       *sql.DB
 	mock     sqlmock.Sqlmock
-	questDAO QuestDAO
+	questDAO dao.QuestDAO
 }
 
 func (s *QuestTestSuite) SetupTest() {

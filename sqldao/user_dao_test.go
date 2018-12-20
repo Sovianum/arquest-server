@@ -1,10 +1,11 @@
-package dao
+package sqldao
 
 import (
 	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/Sovianum/arquest-server/model"
+	"github.com/Sovianum/arquest-server/dao"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
@@ -19,7 +20,7 @@ type UserTestSuite struct {
 	suite.Suite
 	db       *sql.DB
 	mock     sqlmock.Sqlmock
-	userDAO  UserDAO
+	userDAO  dao.UserDAO
 	passHash []byte
 }
 
